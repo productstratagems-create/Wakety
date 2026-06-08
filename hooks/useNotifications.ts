@@ -57,7 +57,7 @@ export function useNotifications() {
   }
 
   async function scheduleOvernightTwist(profile: DayProfile) {
-    if (!profile.overnightTwist || !permissionGranted) return;
+    if (Platform.OS === 'web' || !profile.overnightTwist || !permissionGranted) return;
 
     // Cancel any previously scheduled update
     if (scheduledIdRef.current) {
@@ -92,7 +92,7 @@ export function useNotifications() {
 
   // Dev-only: fire the twist immediately (for testing without waiting overnight)
   async function triggerUpdateNow(profile: DayProfile) {
-    if (!profile.overnightTwist) return;
+    if (Platform.OS === 'web' || !profile.overnightTwist) return;
 
     const { updatedWakeTime, updatedExplanation } = profile.overnightTwist;
 
@@ -108,6 +108,7 @@ export function useNotifications() {
   }
 
   async function cancelScheduled() {
+    if (Platform.OS === 'web' || !scheduledIdRef.current) return;
     if (scheduledIdRef.current) {
       await Notifications.cancelScheduledNotificationAsync(scheduledIdRef.current);
       scheduledIdRef.current = null;
