@@ -12,10 +12,12 @@ import { DayProfile } from '../data/types';
 
 interface Props {
   activeProfileId: string;
+  activeProfile: DayProfile;
   onSelect: (profile: DayProfile) => void;
+  onTriggerUpdate?: (profile: DayProfile) => void;
 }
 
-export function ProfileSelector({ activeProfileId, onSelect }: Props) {
+export function ProfileSelector({ activeProfileId, activeProfile, onSelect, onTriggerUpdate }: Props) {
   const [visible, setVisible] = useState(false);
 
   if (!__DEV__) return null;
@@ -38,6 +40,19 @@ export function ProfileSelector({ activeProfileId, onSelect }: Props) {
         <Pressable style={styles.backdrop} onPress={() => setVisible(false)} />
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Scenario</Text>
+
+          {onTriggerUpdate && (
+            <Pressable
+              style={styles.triggerUpdateButton}
+              onPress={() => {
+                onTriggerUpdate(activeProfile);
+                setVisible(false);
+              }}
+            >
+              <Text style={styles.triggerUpdateText}>⚡ Trigger overnight update now</Text>
+            </Pressable>
+          )}
+
           <ScrollView>
             {profiles.map((p) => (
               <Pressable
@@ -51,14 +66,19 @@ export function ProfileSelector({ activeProfileId, onSelect }: Props) {
                   setVisible(false);
                 }}
               >
-                <Text
-                  style={[
-                    styles.rowText,
-                    p.id === activeProfileId && styles.rowTextActive,
-                  ]}
-                >
-                  {p.label}
-                </Text>
+                <View>
+                  <Text
+                    style={[
+                      styles.rowText,
+                      p.id === activeProfileId && styles.rowTextActive,
+                    ]}
+                  >
+                    {p.label}
+                  </Text>
+                  {p.overnightTwist && (
+                    <Text style={styles.twistHint}>has overnight twist</Text>
+                  )}
+                </View>
                 {p.id === activeProfileId && (
                   <Text style={styles.rowCheck}>✓</Text>
                 )}
@@ -89,7 +109,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: 20,
     paddingBottom: 40,
-    maxHeight: '60%',
+    maxHeight: '65%',
   },
   sheetTitle: {
     color: '#5A7A9A',
@@ -97,14 +117,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  triggerUpdateButton: {
+    marginHorizontal: 24,
+    marginBottom: 12,
+    backgroundColor: '#1A2E1A',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#2A4A2A',
+    alignItems: 'center',
+  },
+  triggerUpdateText: {
+    color: '#4CAF7D',
+    fontSize: 14,
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#1A2535',
   },
@@ -117,6 +153,11 @@ const styles = StyleSheet.create({
   },
   rowTextActive: {
     color: '#F0F4F8',
+  },
+  twistHint: {
+    color: '#2A4A3A',
+    fontSize: 11,
+    marginTop: 2,
   },
   rowCheck: {
     color: '#4CAF7D',

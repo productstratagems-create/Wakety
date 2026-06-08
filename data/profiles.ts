@@ -78,6 +78,12 @@ export const profiles: DayProfile[] = [
       leaveByTime: '07:05',
       explanation: "Your gate moved to Terminal 2 — leaving 15 minutes earlier covers the terminal transfer.",
     },
+    overnightTwist: {
+      triggerTime: '04:45',
+      updatedWakeTime: '05:50',
+      updatedLeaveByTime: '06:35',
+      updatedExplanation: "Your flight moved up 30 minutes — you'll want to leave by 6:35 to keep your check-in window.",
+    },
   },
   {
     id: 'interview-traffic',
@@ -101,6 +107,12 @@ export const profiles: DayProfile[] = [
       wakeTime: '07:50',
       leaveByTime: '08:50',
       explanation: "Traffic is heavier than usual — leaving by 8:50 gets you there with time to settle in.",
+    },
+    overnightTwist: {
+      triggerTime: '06:00',
+      updatedWakeTime: '07:30',
+      updatedLeaveByTime: '08:30',
+      updatedExplanation: "Roadworks cleared overnight — traffic's back to normal, so 8:30 departure is fine.",
     },
   },
   {
