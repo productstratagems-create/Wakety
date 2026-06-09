@@ -3,15 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { DayProfile } from '../data/types';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 export type NotificationState = 'idle' | 'scheduled' | 'triggered';
 
@@ -23,6 +25,8 @@ export function useNotifications() {
   const scheduledIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     requestPermissions();
 
     notificationListener.current = Notifications.addNotificationResponseReceivedListener(
@@ -35,7 +39,6 @@ export function useNotifications() {
       }
     );
 
-    // Handle notifications received while app is foregrounded
     const foregroundListener = Notifications.addNotificationReceivedListener((notification) => {
       const profileId = notification.request.content.data?.profileId as string | undefined;
       if (profileId) {
