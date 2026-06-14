@@ -13,11 +13,18 @@ export type ConditionType =
   | 'transit_disruption'
   | 'flight_delay';
 
+export interface AnchorLocation {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
 export interface AnchorEvent {
   type: AnchorType;
   label: string;
   time: string;
   rigidity: Rigidity;
+  location?: AnchorLocation;
 }
 
 export interface UserPlan {

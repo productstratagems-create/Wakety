@@ -9,9 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { LocationSuggestion } from '../data/entur';
 import { guessAnchorType } from '../data/guessAnchorType';
-import { AnchorType, Rigidity, UserPlan } from '../data/types';
+import { AnchorLocation, AnchorType, Rigidity, UserPlan } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
+import { useLocationSearch } from '../hooks/useLocationSearch';
 import { ANCHOR_ICONS } from './AnchorTag';
 import { IcsImportButton, IcsImportResult } from './IcsImportButton';
 
@@ -28,6 +30,8 @@ interface AnchorDraft {
   hour: string;
   minute: string;
   rigidity: Rigidity | null;
+  location: AnchorLocation | null;
+  locationQuery: string;
 }
 
 const NUMBER_REGEX = /^\d+$/;
@@ -43,11 +47,11 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
 const RIGIDITY_OPTIONS: Rigidity[] = ['hard', 'medium', 'flexible'];
 
 function emptyDraft(key: string): AnchorDraft {
-  return { key, type: null, label: '', hour: '', minute: '', rigidity: null };
+  return { key, type: null, label: '', hour: '', minute: '', rigidity: null, location: null, locationQuery: '' };
 }
 
 function isEmptyDraft(draft: AnchorDraft): boolean {
-  return !draft.type && !draft.label.trim() && !draft.hour && !draft.minute && !draft.rigidity;
+  return !draft.type && !draft.label.trim() && !draft.hour && !draft.minute && !draft.rigidity && !draft.location;
 }
 
 export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
@@ -56,7 +60,16 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     if (initialPlan?.anchors && initialPlan.anchors.length > 0) {
       return initialPlan.anchors.map((anchor, index) => {
         const [hour, minute] = anchor.time.split(':');
-        return { key: `init-${index}`, type: anchor.type, label: anchor.label, hour, minute, rigidity: anchor.rigidity };
+        return {
+          key: `init-${index}`,
+          type: anchor.type,
+          label: anchor.label,
+          hour,
+          minute,
+          rigidity: anchor.rigidity,
+          location: anchor.location ?? null,
+          locationQuery: anchor.location?.name ?? '',
+        };
       });
     }
     return (initialPlan?.hasAnchor ?? true) ? [emptyDraft('init-0')] : [];
@@ -116,6 +129,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
               label: anchor.label.trim(),
               time: `${anchor.hour.padStart(2, '0')}:${anchor.minute.padStart(2, '0')}`,
               rigidity: anchor.rigidity!,
+              ...(anchor.location ? { location: anchor.location } : {}),
             }))
         : [],
       personalChain: {
@@ -170,7 +184,16 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   function handleSelectEvent(event: CalendarEvent) {
     const [hour, minute] = event.time.split(':');
     const guessedType = guessAnchorType(event.title);
-    const filled: AnchorDraft = { key: nextKey(), type: guessedType, label: event.title, hour, minute, rigidity: 'medium' };
+    const filled: AnchorDraft = {
+      key: nextKey(),
+      type: guessedType,
+      label: event.title,
+      hour,
+      minute,
+      rigidity: 'medium',
+      location: null,
+      locationQuery: '',
+    };
 
     setHasAnchor(true);
     setAnchors((prev) => (prev.length === 1 && isEmptyDraft(prev[0]) ? [filled] : [...prev, filled]));
@@ -254,76 +277,16 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             <FieldError visible={showErrors} message={errors.anchors} />
 
             {anchors.map((anchor, index) => (
-              <View key={anchor.key} style={styles.anchorCard}>
-                <View style={styles.anchorCardHeader}>
-                  <Text style={styles.anchorCardTitle}>Event {index + 1}</Text>
-                  {anchors.length > 1 && (
-                    <Pressable onPress={() => handleRemoveAnchor(anchor.key)}>
-                      <Text style={styles.removeText}>Remove</Text>
-                    </Pressable>
-                  )}
-                </View>
-
-                <Text style={styles.sectionLabel}>What kind of event?</Text>
-                <View style={styles.wrapRow}>
-                  {ANCHOR_TYPES.map((type) => (
-                    <Chip
-                      key={type}
-                      label={`${ANCHOR_ICONS[type]} ${ANCHOR_LABELS[type]}`}
-                      active={anchor.type === type}
-                      onPress={() => updateAnchor(anchor.key, { type })}
-                    />
-                  ))}
-                </View>
-                <FieldError visible={showErrors} message={errors[`${anchor.key}.type`]} />
-
-                <Text style={styles.sectionLabel}>Describe it</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Oliver's school drop-off"
-                  placeholderTextColor="#3D5A70"
-                  value={anchor.label}
-                  onChangeText={(text) => updateAnchor(anchor.key, { label: text })}
-                />
-                <FieldError visible={showErrors} message={errors[`${anchor.key}.label`]} />
-
-                <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
-                <View style={styles.timeRow}>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="HH"
-                    placeholderTextColor="#3D5A70"
-                    value={anchor.hour}
-                    onChangeText={(text) => updateAnchor(anchor.key, { hour: text.replace(/[^0-9]/g, '').slice(0, 2) })}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                  <Text style={styles.timeSeparator}>:</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    placeholder="MM"
-                    placeholderTextColor="#3D5A70"
-                    value={anchor.minute}
-                    onChangeText={(text) => updateAnchor(anchor.key, { minute: text.replace(/[^0-9]/g, '').slice(0, 2) })}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                </View>
-                <FieldError visible={showErrors} message={errors[`${anchor.key}.time`]} />
-
-                <Text style={styles.sectionLabel}>How fixed is the time?</Text>
-                <View style={styles.row}>
-                  {RIGIDITY_OPTIONS.map((option) => (
-                    <Chip
-                      key={option}
-                      label={option.charAt(0).toUpperCase() + option.slice(1)}
-                      active={anchor.rigidity === option}
-                      onPress={() => updateAnchor(anchor.key, { rigidity: option })}
-                    />
-                  ))}
-                </View>
-                <FieldError visible={showErrors} message={errors[`${anchor.key}.rigidity`]} />
-              </View>
+              <AnchorCard
+                key={anchor.key}
+                anchor={anchor}
+                index={index}
+                canRemove={anchors.length > 1}
+                errors={errors}
+                showErrors={showErrors}
+                onUpdate={(patch) => updateAnchor(anchor.key, patch)}
+                onRemove={() => handleRemoveAnchor(anchor.key)}
+              />
             ))}
 
             <Pressable
@@ -385,6 +348,140 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+interface AnchorCardProps {
+  anchor: AnchorDraft;
+  index: number;
+  canRemove: boolean;
+  errors: Partial<Record<string, string>>;
+  showErrors: boolean;
+  onUpdate: (patch: Partial<AnchorDraft>) => void;
+  onRemove: () => void;
+}
+
+function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, onRemove }: AnchorCardProps) {
+  const queryMatchesSelection = !!anchor.location && anchor.locationQuery === anchor.location.name;
+  const searchEnabled = !queryMatchesSelection && anchor.locationQuery.trim().length >= 2;
+  const { results, loading } = useLocationSearch(anchor.locationQuery, searchEnabled);
+  const showSuggestions = searchEnabled && (results.length > 0 || loading);
+
+  function handleSelectLocation(suggestion: LocationSuggestion) {
+    onUpdate({
+      location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
+      locationQuery: suggestion.name,
+    });
+  }
+
+  function handleClearLocation() {
+    onUpdate({ location: null, locationQuery: '' });
+  }
+
+  return (
+    <View style={styles.anchorCard}>
+      <View style={styles.anchorCardHeader}>
+        <Text style={styles.anchorCardTitle}>Event {index + 1}</Text>
+        {canRemove && (
+          <Pressable onPress={onRemove}>
+            <Text style={styles.removeText}>Remove</Text>
+          </Pressable>
+        )}
+      </View>
+
+      <Text style={styles.sectionLabel}>What kind of event?</Text>
+      <View style={styles.wrapRow}>
+        {ANCHOR_TYPES.map((type) => (
+          <Chip
+            key={type}
+            label={`${ANCHOR_ICONS[type]} ${ANCHOR_LABELS[type]}`}
+            active={anchor.type === type}
+            onPress={() => onUpdate({ type })}
+          />
+        ))}
+      </View>
+      <FieldError visible={showErrors} message={errors[`${anchor.key}.type`]} />
+
+      <Text style={styles.sectionLabel}>Describe it</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Oliver's school drop-off"
+        placeholderTextColor="#3D5A70"
+        value={anchor.label}
+        onChangeText={(text) => onUpdate({ label: text })}
+      />
+      <FieldError visible={showErrors} message={errors[`${anchor.key}.label`]} />
+
+      <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
+      <View style={styles.timeRow}>
+        <TextInput
+          style={styles.timeInput}
+          placeholder="HH"
+          placeholderTextColor="#3D5A70"
+          value={anchor.hour}
+          onChangeText={(text) => onUpdate({ hour: text.replace(/[^0-9]/g, '').slice(0, 2) })}
+          keyboardType="number-pad"
+          maxLength={2}
+        />
+        <Text style={styles.timeSeparator}>:</Text>
+        <TextInput
+          style={styles.timeInput}
+          placeholder="MM"
+          placeholderTextColor="#3D5A70"
+          value={anchor.minute}
+          onChangeText={(text) => onUpdate({ minute: text.replace(/[^0-9]/g, '').slice(0, 2) })}
+          keyboardType="number-pad"
+          maxLength={2}
+        />
+      </View>
+      <FieldError visible={showErrors} message={errors[`${anchor.key}.time`]} />
+
+      <Text style={styles.sectionLabel}>How fixed is the time?</Text>
+      <View style={styles.row}>
+        {RIGIDITY_OPTIONS.map((option) => (
+          <Chip
+            key={option}
+            label={option.charAt(0).toUpperCase() + option.slice(1)}
+            active={anchor.rigidity === option}
+            onPress={() => onUpdate({ rigidity: option })}
+          />
+        ))}
+      </View>
+      <FieldError visible={showErrors} message={errors[`${anchor.key}.rigidity`]} />
+
+      <Text style={styles.sectionLabel}>Where is it? (optional)</Text>
+      <View style={styles.locationRow}>
+        <TextInput
+          style={[styles.input, styles.locationInput]}
+          placeholder="Search for an address or place"
+          placeholderTextColor="#3D5A70"
+          value={anchor.locationQuery}
+          onChangeText={(text) => onUpdate({ locationQuery: text, location: null })}
+        />
+        {anchor.location && (
+          <Pressable onPress={handleClearLocation}>
+            <Text style={styles.removeText}>Clear</Text>
+          </Pressable>
+        )}
+      </View>
+      {showSuggestions && (
+        <View style={styles.suggestionList}>
+          {loading ? (
+            <Text style={styles.suggestionLoading}>Searching…</Text>
+          ) : (
+            results.map((suggestion) => (
+              <Pressable
+                key={suggestion.id}
+                style={({ pressed }) => [styles.suggestionItem, pressed && styles.pressed]}
+                onPress={() => handleSelectLocation(suggestion)}
+              >
+                <Text style={styles.suggestionText}>{suggestion.name}</Text>
+              </Pressable>
+            ))
+          )}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -557,6 +654,38 @@ const styles = StyleSheet.create({
   },
   removeText: {
     color: '#E08A8A',
+    fontSize: 13,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  locationInput: {
+    flex: 1,
+  },
+  suggestionList: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    backgroundColor: '#0F1923',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E2D40',
+  },
+  suggestionText: {
+    color: '#C5D4E8',
+    fontSize: 14,
+  },
+  suggestionLoading: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    color: '#5A7A9A',
     fontSize: 13,
   },
   pressed: {

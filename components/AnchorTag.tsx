@@ -21,6 +21,7 @@ export function AnchorTag({ anchor, compact }: Props) {
     <View style={[styles.container, compact && styles.containerCompact]}>
       <Text style={[styles.text, compact && styles.textCompact]}>
         {icon}  {anchor.label} · {anchor.time}
+        {anchor.location && !compact ? ` · ${anchor.location.name}` : ''}
       </Text>
     </View>
   );
