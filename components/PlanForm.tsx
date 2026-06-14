@@ -149,8 +149,14 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     }
   }
 
-  function handleAddAnchor() {
-    setAnchors((prev) => [...prev, emptyDraft(nextKey())]);
+  function handleAddAnchor(afterIndex?: number) {
+    setAnchors((prev) => {
+      const draft = emptyDraft(nextKey());
+      if (afterIndex == null) return [...prev, draft];
+      const next = [...prev];
+      next.splice(afterIndex + 1, 0, draft);
+      return next;
+    });
   }
 
   function handleRemoveAnchor(key: string) {
@@ -277,24 +283,25 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             <FieldError visible={showErrors} message={errors.anchors} />
 
             {anchors.map((anchor, index) => (
-              <AnchorCard
-                key={anchor.key}
-                anchor={anchor}
-                index={index}
-                canRemove={anchors.length > 1}
-                errors={errors}
-                showErrors={showErrors}
-                onUpdate={(patch) => updateAnchor(anchor.key, patch)}
-                onRemove={() => handleRemoveAnchor(anchor.key)}
-              />
-            ))}
+              <React.Fragment key={anchor.key}>
+                <AnchorCard
+                  anchor={anchor}
+                  index={index}
+                  canRemove={anchors.length > 1}
+                  errors={errors}
+                  showErrors={showErrors}
+                  onUpdate={(patch) => updateAnchor(anchor.key, patch)}
+                  onRemove={() => handleRemoveAnchor(anchor.key)}
+                />
 
-            <Pressable
-              style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
-              onPress={handleAddAnchor}
-            >
-              <Text style={styles.secondaryText}>+ Add another event</Text>
-            </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.addEventButton, pressed && styles.pressed]}
+                  onPress={() => handleAddAnchor(index)}
+                >
+                  <Text style={styles.secondaryText}>+ Add another event</Text>
+                </Pressable>
+              </React.Fragment>
+            ))}
           </>
         )}
 
@@ -614,6 +621,15 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+  addEventButton: {
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    borderStyle: 'dashed',
+    marginTop: 8,
   },
   calendarButton: {
     borderRadius: 14,
