@@ -1,14 +1,14 @@
 import React from 'react';
 import {
-  Animated,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { DayProfile } from '../data/types';
 import { useTravelTimes } from '../hooks/useTravelTimes';
-import { AnchorTag } from './AnchorTag';
+import { DayTimeline } from './DayTimeline';
 
 interface Props {
   profile: DayProfile;
@@ -24,34 +24,23 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
   if (!recommendation || !anchor) return null;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Wake up at</Text>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
+        <Text style={styles.label}>Wake up at</Text>
 
-      <View style={styles.timeRow}>
-        <Text style={styles.time}>{recommendation.wakeTime}</Text>
-        {confirmed && <Text style={styles.check}>✓</Text>}
-      </View>
+        <View style={styles.timeRow}>
+          <Text style={styles.time}>{recommendation.wakeTime}</Text>
+          {confirmed && <Text style={styles.check}>✓</Text>}
+        </View>
 
-      <Text style={styles.leaveBy}>
-        Leave by {recommendation.leaveByTime}
-      </Text>
-
-      <Text style={styles.explanation}>{recommendation.explanation}</Text>
-
-      <View style={styles.anchorRow}>
-        <AnchorTag anchor={anchor} />
-        {anchors.slice(1).map((extra, index) => (
-          <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
-        ))}
-      </View>
-
-      {travelLegs.map((leg) => (
-        <Text key={leg.key} style={leg.tight ? styles.travelWarning : styles.travelInfo}>
-          {leg.tight
-            ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
-            : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
+        <Text style={styles.leaveBy}>
+          Leave by {recommendation.leaveByTime}
         </Text>
-      ))}
+
+        <Text style={styles.explanation}>{recommendation.explanation}</Text>
+      </View>
+
+      <DayTimeline anchors={anchors} travelLegs={travelLegs} />
 
       {confirmed ? (
         <View style={styles.confirmedBlock}>
@@ -77,16 +66,21 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
           </Pressable>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 24,
+    gap: 28,
+  },
+  hero: {
+    alignItems: 'center',
   },
   label: {
     fontSize: 14,
@@ -125,29 +119,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: '300',
-    marginBottom: 28,
     paddingHorizontal: 8,
-  },
-  anchorRow: {
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 52,
-  },
-  travelWarning: {
-    color: '#E0B88A',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  travelInfo: {
-    color: '#5A7A9A',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
-    paddingHorizontal: 16,
   },
   actions: {
     width: '100%',

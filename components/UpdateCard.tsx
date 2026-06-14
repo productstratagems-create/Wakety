@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DayProfile } from '../data/types';
 import { useTravelTimes } from '../hooks/useTravelTimes';
-import { AnchorTag } from './AnchorTag';
+import { DayTimeline } from './DayTimeline';
 
 interface Props {
   profile: DayProfile;
@@ -16,40 +16,29 @@ export function UpdateCard({ profile, onConfirm }: Props) {
   if (!overnightTwist || !anchor || !recommendation) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>Updated</Text>
-      </View>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Updated</Text>
+        </View>
 
-      <Text style={styles.label}>Wake up at</Text>
+        <Text style={styles.label}>Wake up at</Text>
 
-      <Text style={styles.time}>{overnightTwist.updatedWakeTime}</Text>
+        <Text style={styles.time}>{overnightTwist.updatedWakeTime}</Text>
 
-      <Text style={styles.leaveBy}>
-        Leave by {overnightTwist.updatedLeaveByTime}
-      </Text>
-
-      <Text style={styles.explanation}>{overnightTwist.updatedExplanation}</Text>
-
-      <View style={styles.wasRow}>
-        <Text style={styles.wasLabel}>Was </Text>
-        <Text style={styles.wasTime}>{recommendation.wakeTime}</Text>
-      </View>
-
-      <View style={styles.anchorRow}>
-        <AnchorTag anchor={anchor} />
-        {anchors.slice(1).map((extra, index) => (
-          <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
-        ))}
-      </View>
-
-      {travelLegs.map((leg) => (
-        <Text key={leg.key} style={leg.tight ? styles.travelWarning : styles.travelInfo}>
-          {leg.tight
-            ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
-            : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
+        <Text style={styles.leaveBy}>
+          Leave by {overnightTwist.updatedLeaveByTime}
         </Text>
-      ))}
+
+        <Text style={styles.explanation}>{overnightTwist.updatedExplanation}</Text>
+
+        <View style={styles.wasRow}>
+          <Text style={styles.wasLabel}>Was </Text>
+          <Text style={styles.wasTime}>{recommendation.wakeTime}</Text>
+        </View>
+      </View>
+
+      <DayTimeline anchors={anchors} travelLegs={travelLegs} />
 
       <Pressable
         style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
@@ -57,16 +46,21 @@ export function UpdateCard({ profile, onConfirm }: Props) {
       >
         <Text style={styles.primaryText}>Got it</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 24,
+    gap: 28,
+  },
+  hero: {
+    alignItems: 'center',
   },
   badge: {
     backgroundColor: '#1E3A2A',
@@ -109,13 +103,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: '300',
-    marginBottom: 20,
     paddingHorizontal: 8,
   },
   wasRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 28,
+    marginTop: 20,
   },
   wasLabel: {
     fontSize: 13,
@@ -125,27 +118,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#3D5A70',
     textDecorationLine: 'line-through',
-  },
-  anchorRow: {
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 48,
-  },
-  travelWarning: {
-    color: '#E0B88A',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  travelInfo: {
-    color: '#5A7A9A',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
-    paddingHorizontal: 16,
   },
   primary: {
     backgroundColor: '#1E3A2A',
