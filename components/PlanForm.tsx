@@ -32,6 +32,8 @@ interface AnchorDraft {
   rigidity: Rigidity | null;
   location: AnchorLocation | null;
   locationQuery: string;
+  fromLocation: AnchorLocation | null;
+  fromLocationQuery: string;
 }
 
 const NUMBER_REGEX = /^\d+$/;
@@ -47,11 +49,30 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
 const RIGIDITY_OPTIONS: Rigidity[] = ['hard', 'medium', 'flexible'];
 
 function emptyDraft(key: string): AnchorDraft {
-  return { key, type: null, label: '', hour: '', minute: '', rigidity: null, location: null, locationQuery: '' };
+  return {
+    key,
+    type: null,
+    label: '',
+    hour: '',
+    minute: '',
+    rigidity: null,
+    location: null,
+    locationQuery: '',
+    fromLocation: null,
+    fromLocationQuery: '',
+  };
 }
 
 function isEmptyDraft(draft: AnchorDraft): boolean {
-  return !draft.type && !draft.label.trim() && !draft.hour && !draft.minute && !draft.rigidity && !draft.location;
+  return (
+    !draft.type &&
+    !draft.label.trim() &&
+    !draft.hour &&
+    !draft.minute &&
+    !draft.rigidity &&
+    !draft.location &&
+    !draft.fromLocation
+  );
 }
 
 export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
@@ -69,6 +90,8 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
           rigidity: anchor.rigidity,
           location: anchor.location ?? null,
           locationQuery: anchor.location?.name ?? '',
+          fromLocation: anchor.fromLocation ?? null,
+          fromLocationQuery: anchor.fromLocation?.name ?? '',
         };
       });
     }
@@ -130,6 +153,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
               time: `${anchor.hour.padStart(2, '0')}:${anchor.minute.padStart(2, '0')}`,
               rigidity: anchor.rigidity!,
               ...(anchor.location ? { location: anchor.location } : {}),
+              ...(anchor.fromLocation ? { fromLocation: anchor.fromLocation } : {}),
             }))
         : [],
       personalChain: {
@@ -199,6 +223,8 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
       rigidity: 'medium',
       location: null,
       locationQuery: '',
+      fromLocation: null,
+      fromLocationQuery: '',
     };
 
     setHasAnchor(true);
@@ -369,22 +395,6 @@ interface AnchorCardProps {
 }
 
 function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, onRemove }: AnchorCardProps) {
-  const queryMatchesSelection = !!anchor.location && anchor.locationQuery === anchor.location.name;
-  const searchEnabled = !queryMatchesSelection && anchor.locationQuery.trim().length >= 2;
-  const { results, loading } = useLocationSearch(anchor.locationQuery, searchEnabled);
-  const showSuggestions = searchEnabled && (results.length > 0 || loading);
-
-  function handleSelectLocation(suggestion: LocationSuggestion) {
-    onUpdate({
-      location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
-      locationQuery: suggestion.name,
-    });
-  }
-
-  function handleClearLocation() {
-    onUpdate({ location: null, locationQuery: '' });
-  }
-
   return (
     <View style={styles.anchorCard}>
       <View style={styles.anchorCardHeader}>
@@ -456,17 +466,68 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
       </View>
       <FieldError visible={showErrors} message={errors[`${anchor.key}.rigidity`]} />
 
-      <Text style={styles.sectionLabel}>Where is it? (optional)</Text>
+      <LocationField
+        label="Where is it? (optional)"
+        placeholder="Search for an address or place"
+        query={anchor.locationQuery}
+        location={anchor.location}
+        onChangeQuery={(text) => onUpdate({ locationQuery: text, location: null })}
+        onSelect={(suggestion) =>
+          onUpdate({
+            location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
+            locationQuery: suggestion.name,
+          })
+        }
+        onClear={() => onUpdate({ location: null, locationQuery: '' })}
+      />
+
+      <LocationField
+        label="From where? (optional)"
+        placeholder="Search for a starting address or place"
+        query={anchor.fromLocationQuery}
+        location={anchor.fromLocation}
+        onChangeQuery={(text) => onUpdate({ fromLocationQuery: text, fromLocation: null })}
+        onSelect={(suggestion) =>
+          onUpdate({
+            fromLocation: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
+            fromLocationQuery: suggestion.name,
+          })
+        }
+        onClear={() => onUpdate({ fromLocation: null, fromLocationQuery: '' })}
+      />
+    </View>
+  );
+}
+
+interface LocationFieldProps {
+  label: string;
+  placeholder: string;
+  query: string;
+  location: AnchorLocation | null;
+  onChangeQuery: (text: string) => void;
+  onSelect: (suggestion: LocationSuggestion) => void;
+  onClear: () => void;
+}
+
+function LocationField({ label, placeholder, query, location, onChangeQuery, onSelect, onClear }: LocationFieldProps) {
+  const queryMatchesSelection = !!location && query === location.name;
+  const searchEnabled = !queryMatchesSelection && query.trim().length >= 2;
+  const { results, loading } = useLocationSearch(query, searchEnabled);
+  const showSuggestions = searchEnabled && (results.length > 0 || loading);
+
+  return (
+    <>
+      <Text style={styles.sectionLabel}>{label}</Text>
       <View style={styles.locationRow}>
         <TextInput
           style={[styles.input, styles.locationInput]}
-          placeholder="Search for an address or place"
+          placeholder={placeholder}
           placeholderTextColor="#3D5A70"
-          value={anchor.locationQuery}
-          onChangeText={(text) => onUpdate({ locationQuery: text, location: null })}
+          value={query}
+          onChangeText={onChangeQuery}
         />
-        {anchor.location && (
-          <Pressable onPress={handleClearLocation}>
+        {location && (
+          <Pressable onPress={onClear}>
             <Text style={styles.removeText}>Clear</Text>
           </Pressable>
         )}
@@ -480,7 +541,7 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
               <Pressable
                 key={suggestion.id}
                 style={({ pressed }) => [styles.suggestionItem, pressed && styles.pressed]}
-                onPress={() => handleSelectLocation(suggestion)}
+                onPress={() => onSelect(suggestion)}
               >
                 <Text style={styles.suggestionText}>{suggestion.name}</Text>
               </Pressable>
@@ -488,7 +549,7 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
           )}
         </View>
       )}
-    </View>
+    </>
   );
 }
 

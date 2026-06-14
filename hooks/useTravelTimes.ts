@@ -3,10 +3,11 @@ import { getTravelTimeMinutes } from '../data/journeyPlanner';
 import { AnchorEvent } from '../data/types';
 
 export interface TravelLeg {
-  from: AnchorEvent;
-  to: AnchorEvent;
+  key: string;
+  fromLabel: string;
+  toLabel: string;
   travelMinutes: number;
-  gapMinutes: number;
+  gapMinutes: number | null;
   tight: boolean;
 }
 
@@ -24,34 +25,50 @@ function tomorrowAt(hhmm: string): Date {
 }
 
 /**
- * For each pair of consecutive anchors that both have a geocoded location,
- * estimates the travel time between them and flags legs where the gap
- * between the two event start times is tighter than the trip itself.
+ * For each anchor, resolves a departure point — either its own custom
+ * `fromLocation`, or the previous anchor's `location` — and, if the anchor
+ * itself has a `location`, estimates the travel time between the two.
+ * Flags legs where the gap between the departure and arrival times is
+ * tighter than the trip itself.
  */
 export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
   const [legs, setLegs] = useState<TravelLeg[]>([]);
-  const key = anchors.map((a) => `${a.time}:${a.location?.lat ?? ''},${a.location?.lon ?? ''}`).join('|');
+  const key = anchors
+    .map((a) => `${a.time}:${a.location?.lat ?? ''},${a.location?.lon ?? ''}:${a.fromLocation?.lat ?? ''},${a.fromLocation?.lon ?? ''}`)
+    .join('|');
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
       const results: TravelLeg[] = [];
-      for (let i = 0; i < anchors.length - 1; i++) {
-        const from = anchors[i];
-        const to = anchors[i + 1];
-        if (!from.location || !to.location) continue;
+      for (let i = 0; i < anchors.length; i++) {
+        const anchor = anchors[i];
+        const previous = anchors[i - 1];
+        const origin = anchor.fromLocation ?? previous?.location;
+        const destination = anchor.location;
+        if (!origin || !destination) continue;
 
-        const travelMinutes = await getTravelTimeMinutes(from.location, to.location, tomorrowAt(to.time));
+        const travelMinutes = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time));
         if (travelMinutes == null) continue;
 
-        const gapMinutes = toMinutes(to.time) - toMinutes(from.time);
-        results.push({ from, to, travelMinutes, gapMinutes, tight: travelMinutes > gapMinutes });
+        const gapMinutes = previous ? toMinutes(anchor.time) - toMinutes(previous.time) : null;
+        const tight = gapMinutes != null && travelMinutes > gapMinutes;
+        const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
+
+        results.push({
+          key: `${anchor.time}-${anchor.label}`,
+          fromLabel,
+          toLabel: anchor.label,
+          travelMinutes,
+          gapMinutes,
+          tight,
+        });
       }
       if (!cancelled) setLegs(results);
     }
 
-    if (anchors.length >= 2) {
+    if (anchors.length >= 1) {
       run();
     } else {
       setLegs([]);

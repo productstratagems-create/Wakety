@@ -25,6 +25,7 @@ export interface AnchorEvent {
   time: string;
   rigidity: Rigidity;
   location?: AnchorLocation;
+  fromLocation?: AnchorLocation;
 }
 
 export interface UserPlan {
