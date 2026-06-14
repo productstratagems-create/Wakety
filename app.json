@@ -24,6 +24,14 @@
     },
     "experiments": {
       "baseUrl": "/Wakety"
-    }
+    },
+    "plugins": [
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Wakety uses your calendar to suggest tomorrow's anchor event."
+        }
+      ]
+    ]
   }
 }
