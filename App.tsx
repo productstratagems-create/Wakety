@@ -1,42 +1,42 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdvisoryCard } from './components/AdvisoryCard';
-import { ProfileSelector } from './components/ProfileSelector';
+import { PlanForm } from './components/PlanForm';
 import { QuietState } from './components/QuietState';
 import { UpdateCard } from './components/UpdateCard';
 import { useNotifications } from './hooks/useNotifications';
-import { useProfile } from './hooks/useProfile';
+import { useUserPlan } from './hooks/useUserPlan';
 
 export default function App() {
-  const { activeProfile, confirmed, selectProfile, confirm, reset } = useProfile();
+  const { plan, dayProfile, loading, confirmed, savePlan, confirm, resetConfirmed } = useUserPlan();
   const {
     notificationState,
     triggeredProfileId,
     scheduleOvernightTwist,
-    triggerUpdateNow,
     cancelScheduled,
     resetNotificationState,
   } = useNotifications();
+  const [editing, setEditing] = useState(false);
+
+  if (loading) {
+    return <View style={styles.screen} />;
+  }
 
   // When a notification fires for the active profile, surface the update
   const showUpdate =
-    notificationState === 'triggered' && triggeredProfileId === activeProfile.id;
+    !!dayProfile && notificationState === 'triggered' && triggeredProfileId === dayProfile.id;
 
   // When the user confirms the advisory, schedule the overnight watch
   async function handleConfirm() {
     confirm();
-    if (activeProfile.overnightTwist) {
-      await scheduleOvernightTwist(activeProfile);
+    if (dayProfile?.overnightTwist) {
+      await scheduleOvernightTwist(dayProfile);
     }
   }
 
   function handleAdjust() {
-    Alert.alert(
-      'Adjust wake time',
-      'In the full app, you can nudge the time ± 15 minutes.\n\nThis interaction is being tested in Phase 1.',
-      [{ text: 'OK' }]
-    );
+    setEditing(true);
   }
 
   function handleUpdateConfirm() {
@@ -44,30 +44,33 @@ export default function App() {
     cancelScheduled();
   }
 
-  function handleProfileChange(profile: Parameters<typeof selectProfile>[0]) {
-    reset();
+  async function handlePlanSubmit(plan: Parameters<typeof savePlan>[0]) {
+    resetConfirmed();
     resetNotificationState();
     cancelScheduled();
-    selectProfile(profile);
+    await savePlan(plan);
+    setEditing(false);
   }
 
   function renderContent() {
+    if (!dayProfile) return null;
+
     if (showUpdate) {
       return (
         <UpdateCard
-          profile={activeProfile}
+          profile={dayProfile}
           onConfirm={handleUpdateConfirm}
         />
       );
     }
 
-    if (!activeProfile.recommendation) {
+    if (!dayProfile.recommendation) {
       return <QuietState />;
     }
 
     return (
       <AdvisoryCard
-        profile={activeProfile}
+        profile={dayProfile}
         confirmed={confirmed}
         onConfirm={handleConfirm}
         onAdjust={handleAdjust}
@@ -75,22 +78,29 @@ export default function App() {
     );
   }
 
+  const showForm = editing || !dayProfile;
+
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
 
       <Text style={styles.wordmark}>Wakety</Text>
 
-      {renderContent()}
+      {showForm ? (
+        <PlanForm
+          initialPlan={plan}
+          onSubmit={handlePlanSubmit}
+          onCancel={dayProfile ? () => setEditing(false) : undefined}
+        />
+      ) : (
+        <>
+          {renderContent()}
 
-      <ProfileSelector
-        activeProfileId={activeProfile.id}
-        onSelect={handleProfileChange}
-        onTriggerUpdate={
-          activeProfile.overnightTwist && confirmed ? triggerUpdateNow : undefined
-        }
-        activeProfile={activeProfile}
-      />
+          <Pressable style={styles.editButton} onPress={() => setEditing(true)}>
+            <Text style={styles.editButtonText}>Edit plan</Text>
+          </Pressable>
+        </>
+      )}
     </View>
   );
 }
@@ -109,5 +119,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     textAlign: 'center',
     marginBottom: 0,
+  },
+  editButton: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  editButtonText: {
+    color: '#5A7A9A',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DayProfile } from '../data/types';
 
-const ANCHOR_ICONS: Record<NonNullable<DayProfile['anchor']>['type'], string> = {
+export const ANCHOR_ICONS: Record<NonNullable<DayProfile['anchor']>['type'], string> = {
   school_run: '🎒',
   flight: '✈️',
   interview: '💼',
