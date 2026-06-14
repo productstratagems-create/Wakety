@@ -34,6 +34,8 @@ function buildModes(transportMode?: TransportMode): Record<string, unknown> | un
       return { directMode: 'foot' };
     case 'bicycle':
       return { directMode: 'bicycle' };
+    case 'car':
+      return { directMode: 'car' };
     case 'bus':
     case 'tram':
     case 'metro':

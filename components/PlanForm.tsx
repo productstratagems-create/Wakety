@@ -49,10 +49,11 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
 };
 const RIGIDITY_OPTIONS: Rigidity[] = ['hard', 'medium', 'flexible'];
 
-const TRANSPORT_MODES: TransportMode[] = ['walk', 'bicycle', 'bus', 'tram', 'metro', 'rail'];
+const TRANSPORT_MODES: TransportMode[] = ['walk', 'bicycle', 'car', 'bus', 'tram', 'metro', 'rail'];
 const TRANSPORT_ICONS: Record<TransportMode, string> = {
   walk: '🚶',
   bicycle: '🚲',
+  car: '🚗',
   bus: '🚌',
   tram: '🚊',
   metro: '🚇',
@@ -61,6 +62,7 @@ const TRANSPORT_ICONS: Record<TransportMode, string> = {
 const TRANSPORT_LABELS: Record<TransportMode, string> = {
   walk: 'Walk',
   bicycle: 'Bike',
+  car: 'Car',
   bus: 'Bus',
   tram: 'Tram',
   metro: 'T-bane',

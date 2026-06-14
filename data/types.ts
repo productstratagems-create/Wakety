@@ -19,7 +19,7 @@ export interface AnchorLocation {
   lon: number;
 }
 
-export type TransportMode = 'walk' | 'bicycle' | 'bus' | 'tram' | 'metro' | 'rail';
+export type TransportMode = 'walk' | 'bicycle' | 'car' | 'bus' | 'tram' | 'metro' | 'rail';
 
 export interface AnchorEvent {
   type: AnchorType;

@@ -15,6 +15,7 @@ export interface TravelLeg {
 const MODE_ICONS: Record<TransportMode, string> = {
   walk: '🚶',
   bicycle: '🚲',
+  car: '🚗',
   bus: '🚌',
   tram: '🚊',
   metro: '🚇',
