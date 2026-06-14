@@ -9,7 +9,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { guessAnchorType } from '../data/guessAnchorType';
 import { AnchorType, Rigidity, UserPlan } from '../data/types';
+import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
 import { ANCHOR_ICONS } from './AnchorTag';
 
 interface Props {
@@ -42,6 +44,11 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   const [commuteMinutes, setCommuteMinutes] = useState(String(initialPlan?.personalChain.commuteMinutes ?? ''));
   const [bufferMinutes, setBufferMinutes] = useState(String(initialPlan?.personalChain.bufferMinutes ?? ''));
   const [showErrors, setShowErrors] = useState(false);
+  const [calendarStatus, setCalendarStatus] = useState<
+    'idle' | 'loading' | 'denied' | 'empty' | 'error' | 'unsupported' | 'picking'
+  >('idle');
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const { importTomorrowEvents } = useCalendarImport();
 
   const errors: Partial<Record<string, string>> = {};
   if (hasAnchor) {
@@ -86,6 +93,30 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     onSubmit(plan);
   }
 
+  async function handleImportFromCalendar() {
+    setCalendarStatus('loading');
+    const result = await importTomorrowEvents();
+    if (result.status === 'ok') {
+      setCalendarEvents(result.events);
+      setCalendarStatus('picking');
+    } else {
+      setCalendarStatus(result.status);
+    }
+  }
+
+  function handleSelectEvent(event: CalendarEvent) {
+    const [hour, minute] = event.time.split(':');
+    setHasAnchor(true);
+    setAnchorLabel(event.title);
+    setAnchorHour(hour);
+    setAnchorMinute(minute);
+    const guessedType = guessAnchorType(event.title);
+    if (guessedType) {
+      setAnchorType(guessedType);
+    }
+    setCalendarStatus('idle');
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -102,6 +133,42 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
         {hasAnchor && (
           <>
+            {Platform.OS !== 'web' && (
+              <>
+                <Pressable
+                  style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
+                  onPress={handleImportFromCalendar}
+                >
+                  <Text style={styles.calendarButtonText}>
+                    {calendarStatus === 'loading' ? 'Looking…' : '📅 Import from calendar'}
+                  </Text>
+                </Pressable>
+
+                {calendarStatus === 'picking' && (
+                  <View style={styles.wrapRow}>
+                    {calendarEvents.map((event, index) => (
+                      <Chip
+                        key={`${event.time}-${event.title}-${index}`}
+                        label={`${event.time} — ${event.title}`}
+                        active={false}
+                        onPress={() => handleSelectEvent(event)}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                {calendarStatus === 'denied' && (
+                  <Text style={styles.calendarHint}>Calendar access was denied.</Text>
+                )}
+                {calendarStatus === 'empty' && (
+                  <Text style={styles.calendarHint}>No events found on your calendar for tomorrow.</Text>
+                )}
+                {calendarStatus === 'error' && (
+                  <Text style={styles.calendarHint}>Couldn't read your calendar. Try again later.</Text>
+                )}
+              </>
+            )}
+
             <Text style={styles.sectionLabel}>What kind of event?</Text>
             <View style={styles.wrapRow}>
               {ANCHOR_TYPES.map((type) => (
@@ -346,6 +413,25 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+  calendarButton: {
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    backgroundColor: '#0F1923',
+    marginBottom: 12,
+  },
+  calendarButtonText: {
+    color: '#8A9BB5',
+    fontSize: 14,
+    letterSpacing: 0.3,
+  },
+  calendarHint: {
+    color: '#5A7A9A',
+    fontSize: 13,
+    marginBottom: 12,
   },
   pressed: {
     opacity: 0.7,
