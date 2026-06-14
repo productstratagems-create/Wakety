@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { DayProfile } from '../data/types';
+import { useTravelTimes } from '../hooks/useTravelTimes';
 import { AnchorTag } from './AnchorTag';
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 
 export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props) {
   const { anchor, anchors, recommendation } = profile;
+  const travelLegs = useTravelTimes(anchors);
 
   if (!recommendation || !anchor) return null;
 
@@ -42,6 +44,13 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
           <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
         ))}
       </View>
+
+      {travelLegs.filter((leg) => leg.tight).map((leg) => (
+        <Text key={`${leg.from.label}-${leg.to.label}`} style={styles.travelWarning}>
+          ⚠ Only {leg.gapMinutes} min between {leg.from.label} and {leg.to.label}, but it's about a{' '}
+          {leg.travelMinutes} min trip.
+        </Text>
+      ))}
 
       {confirmed ? (
         <View style={styles.confirmedBlock}>
@@ -122,6 +131,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginBottom: 52,
+  },
+  travelWarning: {
+    color: '#E0B88A',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   actions: {
     width: '100%',

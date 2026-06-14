@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DayProfile } from '../data/types';
+import { useTravelTimes } from '../hooks/useTravelTimes';
 import { AnchorTag } from './AnchorTag';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 
 export function UpdateCard({ profile, onConfirm }: Props) {
   const { anchor, anchors, recommendation, overnightTwist } = profile;
+  const travelLegs = useTravelTimes(anchors);
 
   if (!overnightTwist || !anchor || !recommendation) return null;
 
@@ -40,6 +42,13 @@ export function UpdateCard({ profile, onConfirm }: Props) {
           <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
         ))}
       </View>
+
+      {travelLegs.filter((leg) => leg.tight).map((leg) => (
+        <Text key={`${leg.from.label}-${leg.to.label}`} style={styles.travelWarning}>
+          ⚠ Only {leg.gapMinutes} min between {leg.from.label} and {leg.to.label}, but it's about a{' '}
+          {leg.travelMinutes} min trip.
+        </Text>
+      ))}
 
       <Pressable
         style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
@@ -120,6 +129,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginBottom: 48,
+  },
+  travelWarning: {
+    color: '#E0B88A',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   primary: {
     backgroundColor: '#1E3A2A',
