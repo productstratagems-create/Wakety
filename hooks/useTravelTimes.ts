@@ -10,6 +10,7 @@ export interface TravelLeg {
   gapMinutes: number | null;
   tight: boolean;
   icon: string;
+  leaveByTime: string;
 }
 
 const MODE_ICONS: Record<TransportMode, string> = {
@@ -27,6 +28,13 @@ const DEFAULT_ICON = '🚇';
 function toMinutes(hhmm: string): number {
   const [hours, minutes] = hhmm.split(':').map(Number);
   return hours * 60 + minutes;
+}
+
+function fromMinutes(mins: number): string {
+  const wrapped = ((mins % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function tomorrowAt(hhmm: string): Date {
@@ -69,6 +77,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
         const tight = gapMinutes != null && travelMinutes > gapMinutes;
         const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
         const icon = anchor.transportMode ? MODE_ICONS[anchor.transportMode] : DEFAULT_ICON;
+        const leaveByTime = fromMinutes(toMinutes(anchor.time) - travelMinutes);
 
         results.push({
           key: `${anchor.time}-${anchor.label}`,
@@ -78,6 +87,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
           gapMinutes,
           tight,
           icon,
+          leaveByTime,
         });
       }
       if (!cancelled) setLegs(results);

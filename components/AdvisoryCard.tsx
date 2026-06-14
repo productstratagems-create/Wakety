@@ -48,8 +48,8 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
       {travelLegs.map((leg) => (
         <Text key={leg.key} style={leg.tight ? styles.travelWarning : styles.travelInfo}>
           {leg.tight
-            ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip.`
-            : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel}`}
+            ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
+            : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
         </Text>
       ))}
 
