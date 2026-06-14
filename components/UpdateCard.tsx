@@ -43,10 +43,14 @@ export function UpdateCard({ profile, onConfirm }: Props) {
         ))}
       </View>
 
-      {travelLegs.filter((leg) => leg.tight).map((leg) => (
-        <Text key={`${leg.from.label}-${leg.to.label}`} style={styles.travelWarning}>
-          ⚠ Only {leg.gapMinutes} min between {leg.from.label} and {leg.to.label}, but it's about a{' '}
-          {leg.travelMinutes} min trip.
+      {travelLegs.map((leg) => (
+        <Text
+          key={`${leg.from.label}-${leg.to.label}`}
+          style={leg.tight ? styles.travelWarning : styles.travelInfo}
+        >
+          {leg.tight
+            ? `⚠ Only ${leg.gapMinutes} min between ${leg.from.label} and ${leg.to.label}, but it's about a ${leg.travelMinutes} min trip.`
+            : `🚇 ~${leg.travelMinutes} min from ${leg.from.label} to ${leg.to.label}`}
         </Text>
       ))}
 
@@ -132,6 +136,14 @@ const styles = StyleSheet.create({
   },
   travelWarning: {
     color: '#E0B88A',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  travelInfo: {
+    color: '#5A7A9A',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 19,
