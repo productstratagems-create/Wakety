@@ -18,7 +18,6 @@ interface Props {
   onCancel?: () => void;
 }
 
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const NUMBER_REGEX = /^\d+$/;
 
 const ANCHOR_TYPES: AnchorType[] = ['school_run', 'flight', 'interview', 'meeting', 'appointment'];
@@ -35,7 +34,9 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   const [hasAnchor, setHasAnchor] = useState(initialPlan?.hasAnchor ?? true);
   const [anchorType, setAnchorType] = useState<AnchorType | null>(initialPlan?.anchor?.type ?? null);
   const [anchorLabel, setAnchorLabel] = useState(initialPlan?.anchor?.label ?? '');
-  const [anchorTime, setAnchorTime] = useState(initialPlan?.anchor?.time ?? '');
+  const [initialHour, initialMinute] = (initialPlan?.anchor?.time ?? '').split(':');
+  const [anchorHour, setAnchorHour] = useState(initialHour ?? '');
+  const [anchorMinute, setAnchorMinute] = useState(initialMinute ?? '');
   const [rigidity, setRigidity] = useState<Rigidity | null>(initialPlan?.anchor?.rigidity ?? null);
   const [prepMinutes, setPrepMinutes] = useState(String(initialPlan?.personalChain.prepMinutes ?? ''));
   const [commuteMinutes, setCommuteMinutes] = useState(String(initialPlan?.personalChain.commuteMinutes ?? ''));
@@ -46,7 +47,9 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   if (hasAnchor) {
     if (!anchorType) errors.anchorType = 'Pick a type';
     if (!anchorLabel.trim()) errors.anchorLabel = 'Required';
-    if (!TIME_REGEX.test(anchorTime)) errors.anchorTime = 'Use 24h HH:MM';
+    const hourValid = NUMBER_REGEX.test(anchorHour) && Number(anchorHour) <= 23;
+    const minuteValid = NUMBER_REGEX.test(anchorMinute) && Number(anchorMinute) <= 59;
+    if (!hourValid || !minuteValid) errors.anchorTime = 'Enter a valid 24h time';
     if (!rigidity) errors.rigidity = 'Pick one';
   }
   if (prepMinutes !== '' && !NUMBER_REGEX.test(prepMinutes)) errors.prepMinutes = 'Whole number';
@@ -69,7 +72,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
         ? {
             type: anchorType!,
             label: anchorLabel.trim(),
-            time: anchorTime,
+            time: `${anchorHour.padStart(2, '0')}:${anchorMinute.padStart(2, '0')}`,
             rigidity: rigidity!,
           }
         : null,
@@ -122,15 +125,28 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             />
             <FieldError visible={showErrors} message={errors.anchorLabel} />
 
-            <Text style={styles.sectionLabel}>What time does it start?</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="HH:MM (24h), e.g. 08:30"
-              placeholderTextColor="#3D5A70"
-              value={anchorTime}
-              onChangeText={setAnchorTime}
-              keyboardType="numeric"
-            />
+            <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
+            <View style={styles.timeRow}>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="HH"
+                placeholderTextColor="#3D5A70"
+                value={anchorHour}
+                onChangeText={(text) => setAnchorHour(text.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.timeSeparator}>:</Text>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="MM"
+                placeholderTextColor="#3D5A70"
+                value={anchorMinute}
+                onChangeText={(text) => setAnchorMinute(text.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+            </View>
             <FieldError visible={showErrors} message={errors.anchorTime} />
 
             <Text style={styles.sectionLabel}>How fixed is the time?</Text>
@@ -277,6 +293,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     color: '#F0F4F8',
     fontSize: 16,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  timeInput: {
+    backgroundColor: '#0F1923',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    color: '#F0F4F8',
+    fontSize: 16,
+    width: 64,
+    textAlign: 'center',
+  },
+  timeSeparator: {
+    color: '#5A7A9A',
+    fontSize: 20,
+    fontWeight: '300',
   },
   error: {
     color: '#E08A8A',
