@@ -79,10 +79,11 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
   const errors: Partial<Record<string, string>> = {};
   if (hasAnchor) {
-    if (anchors.length === 0) {
+    const filledAnchors = anchors.filter((anchor) => !isEmptyDraft(anchor));
+    if (filledAnchors.length === 0) {
       errors.anchors = 'Add at least one event, or switch to quiet day.';
     }
-    for (const anchor of anchors) {
+    for (const anchor of filledAnchors) {
       if (!anchor.type) errors[`${anchor.key}.type`] = 'Pick a type';
       if (!anchor.label.trim()) errors[`${anchor.key}.label`] = 'Required';
       const hourValid = NUMBER_REGEX.test(anchor.hour) && Number(anchor.hour) <= 23;
@@ -108,12 +109,14 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
       label: 'Tomorrow',
       hasAnchor,
       anchors: hasAnchor
-        ? anchors.map((anchor) => ({
-            type: anchor.type!,
-            label: anchor.label.trim(),
-            time: `${anchor.hour.padStart(2, '0')}:${anchor.minute.padStart(2, '0')}`,
-            rigidity: anchor.rigidity!,
-          }))
+        ? anchors
+            .filter((anchor) => !isEmptyDraft(anchor))
+            .map((anchor) => ({
+              type: anchor.type!,
+              label: anchor.label.trim(),
+              time: `${anchor.hour.padStart(2, '0')}:${anchor.minute.padStart(2, '0')}`,
+              rigidity: anchor.rigidity!,
+            }))
         : [],
       personalChain: {
         prepMinutes: parseInt(prepMinutes || '0', 10),
