@@ -47,7 +47,7 @@ export function UpdateCard({ profile, onConfirm }: Props) {
         <Text key={leg.key} style={leg.tight ? styles.travelWarning : styles.travelInfo}>
           {leg.tight
             ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip.`
-            : `🚇 ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel}`}
+            : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel}`}
         </Text>
       ))}
 

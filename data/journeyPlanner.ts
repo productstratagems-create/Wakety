@@ -1,4 +1,4 @@
-import { AnchorLocation } from './types';
+import { AnchorLocation, TransportMode } from './types';
 
 const ENDPOINT = 'https://api.entur.io/journey-planner/v3/graphql';
 
@@ -6,13 +6,14 @@ const ENDPOINT = 'https://api.entur.io/journey-planner/v3/graphql';
 const CLIENT_NAME = 'wakety - planform';
 
 const TRAVEL_TIME_QUERY = `
-  query travelTime($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!, $arriveBy: DateTime!) {
+  query travelTime($fromLat: Float!, $fromLon: Float!, $toLat: Float!, $toLon: Float!, $arriveBy: DateTime!, $modes: Modes) {
     trip(
       from: { coordinates: { latitude: $fromLat, longitude: $fromLon } }
       to: { coordinates: { latitude: $toLat, longitude: $toLon } }
       dateTime: $arriveBy
       arriveBy: true
       numTripPatterns: 1
+      modes: $modes
     ) {
       tripPatterns {
         duration
@@ -22,14 +23,37 @@ const TRAVEL_TIME_QUERY = `
 `;
 
 /**
- * Returns the estimated public-transit travel time, in minutes, to go from
- * `from` to `to` and arrive by `arriveBy`. Returns null if no route was found
- * or the request failed.
+ * Builds the Entur `Modes` input for a given transport preference.
+ * `walk`/`bicycle` request a direct (non-transit) trip; the public-transport
+ * modes restrict transit legs to that mode. `undefined` omits the filter
+ * entirely, letting Entur pick the best combination.
+ */
+function buildModes(transportMode?: TransportMode): Record<string, unknown> | undefined {
+  switch (transportMode) {
+    case 'walk':
+      return { directMode: 'foot' };
+    case 'bicycle':
+      return { directMode: 'bicycle' };
+    case 'bus':
+    case 'tram':
+    case 'metro':
+    case 'rail':
+      return { transportModes: [{ transportMode }] };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Returns the estimated travel time, in minutes, to go from `from` to `to`
+ * and arrive by `arriveBy`, optionally restricted to `transportMode`.
+ * Returns null if no route was found or the request failed.
  */
 export async function getTravelTimeMinutes(
   from: AnchorLocation,
   to: AnchorLocation,
-  arriveBy: Date
+  arriveBy: Date,
+  transportMode?: TransportMode
 ): Promise<number | null> {
   try {
     const response = await fetch(ENDPOINT, {
@@ -46,6 +70,7 @@ export async function getTravelTimeMinutes(
           toLat: to.lat,
           toLon: to.lon,
           arriveBy: arriveBy.toISOString(),
+          modes: buildModes(transportMode),
         },
       }),
     });

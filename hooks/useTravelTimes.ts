@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getTravelTimeMinutes } from '../data/journeyPlanner';
-import { AnchorEvent } from '../data/types';
+import { AnchorEvent, TransportMode } from '../data/types';
 
 export interface TravelLeg {
   key: string;
@@ -9,7 +9,19 @@ export interface TravelLeg {
   travelMinutes: number;
   gapMinutes: number | null;
   tight: boolean;
+  icon: string;
 }
+
+const MODE_ICONS: Record<TransportMode, string> = {
+  walk: '🚶',
+  bicycle: '🚲',
+  bus: '🚌',
+  tram: '🚊',
+  metro: '🚇',
+  rail: '🚆',
+};
+
+const DEFAULT_ICON = '🚇';
 
 function toMinutes(hhmm: string): number {
   const [hours, minutes] = hhmm.split(':').map(Number);
@@ -34,7 +46,7 @@ function tomorrowAt(hhmm: string): Date {
 export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
   const [legs, setLegs] = useState<TravelLeg[]>([]);
   const key = anchors
-    .map((a) => `${a.time}:${a.location?.lat ?? ''},${a.location?.lon ?? ''}:${a.fromLocation?.lat ?? ''},${a.fromLocation?.lon ?? ''}`)
+    .map((a) => `${a.time}:${a.location?.lat ?? ''},${a.location?.lon ?? ''}:${a.fromLocation?.lat ?? ''},${a.fromLocation?.lon ?? ''}:${a.transportMode ?? ''}`)
     .join('|');
 
   useEffect(() => {
@@ -49,12 +61,13 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
         const destination = anchor.location;
         if (!origin || !destination) continue;
 
-        const travelMinutes = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time));
+        const travelMinutes = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
         if (travelMinutes == null) continue;
 
         const gapMinutes = previous ? toMinutes(anchor.time) - toMinutes(previous.time) : null;
         const tight = gapMinutes != null && travelMinutes > gapMinutes;
         const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
+        const icon = anchor.transportMode ? MODE_ICONS[anchor.transportMode] : DEFAULT_ICON;
 
         results.push({
           key: `${anchor.time}-${anchor.label}`,
@@ -63,6 +76,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
           travelMinutes,
           gapMinutes,
           tight,
+          icon,
         });
       }
       if (!cancelled) setLegs(results);

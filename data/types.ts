@@ -19,6 +19,8 @@ export interface AnchorLocation {
   lon: number;
 }
 
+export type TransportMode = 'walk' | 'bicycle' | 'bus' | 'tram' | 'metro' | 'rail';
+
 export interface AnchorEvent {
   type: AnchorType;
   label: string;
@@ -26,6 +28,7 @@ export interface AnchorEvent {
   rigidity: Rigidity;
   location?: AnchorLocation;
   fromLocation?: AnchorLocation;
+  transportMode?: TransportMode;
 }
 
 export interface UserPlan {

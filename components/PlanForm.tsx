@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LocationSuggestion } from '../data/entur';
 import { guessAnchorType } from '../data/guessAnchorType';
-import { AnchorLocation, AnchorType, Rigidity, UserPlan } from '../data/types';
+import { AnchorLocation, AnchorType, Rigidity, TransportMode, UserPlan } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
 import { useLocationSearch } from '../hooks/useLocationSearch';
 import { ANCHOR_ICONS } from './AnchorTag';
@@ -34,6 +34,7 @@ interface AnchorDraft {
   locationQuery: string;
   fromLocation: AnchorLocation | null;
   fromLocationQuery: string;
+  transportMode: TransportMode | null;
 }
 
 const NUMBER_REGEX = /^\d+$/;
@@ -48,6 +49,24 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
 };
 const RIGIDITY_OPTIONS: Rigidity[] = ['hard', 'medium', 'flexible'];
 
+const TRANSPORT_MODES: TransportMode[] = ['walk', 'bicycle', 'bus', 'tram', 'metro', 'rail'];
+const TRANSPORT_ICONS: Record<TransportMode, string> = {
+  walk: '🚶',
+  bicycle: '🚲',
+  bus: '🚌',
+  tram: '🚊',
+  metro: '🚇',
+  rail: '🚆',
+};
+const TRANSPORT_LABELS: Record<TransportMode, string> = {
+  walk: 'Walk',
+  bicycle: 'Bike',
+  bus: 'Bus',
+  tram: 'Tram',
+  metro: 'T-bane',
+  rail: 'Train',
+};
+
 function emptyDraft(key: string): AnchorDraft {
   return {
     key,
@@ -60,6 +79,7 @@ function emptyDraft(key: string): AnchorDraft {
     locationQuery: '',
     fromLocation: null,
     fromLocationQuery: '',
+    transportMode: null,
   };
 }
 
@@ -71,7 +91,8 @@ function isEmptyDraft(draft: AnchorDraft): boolean {
     !draft.minute &&
     !draft.rigidity &&
     !draft.location &&
-    !draft.fromLocation
+    !draft.fromLocation &&
+    !draft.transportMode
   );
 }
 
@@ -92,6 +113,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
           locationQuery: anchor.location?.name ?? '',
           fromLocation: anchor.fromLocation ?? null,
           fromLocationQuery: anchor.fromLocation?.name ?? '',
+          transportMode: anchor.transportMode ?? null,
         };
       });
     }
@@ -154,6 +176,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
               rigidity: anchor.rigidity!,
               ...(anchor.location ? { location: anchor.location } : {}),
               ...(anchor.fromLocation ? { fromLocation: anchor.fromLocation } : {}),
+              ...(anchor.transportMode ? { transportMode: anchor.transportMode } : {}),
             }))
         : [],
       personalChain: {
@@ -225,6 +248,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
       locationQuery: '',
       fromLocation: null,
       fromLocationQuery: '',
+      transportMode: null,
     };
 
     setHasAnchor(true);
@@ -495,6 +519,18 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
         }
         onClear={() => onUpdate({ fromLocation: null, fromLocationQuery: '' })}
       />
+
+      <Text style={styles.sectionLabel}>Preferred way to get there (optional)</Text>
+      <View style={styles.wrapRow}>
+        {TRANSPORT_MODES.map((mode) => (
+          <Chip
+            key={mode}
+            label={`${TRANSPORT_ICONS[mode]} ${TRANSPORT_LABELS[mode]}`}
+            active={anchor.transportMode === mode}
+            onPress={() => onUpdate({ transportMode: anchor.transportMode === mode ? null : mode })}
+          />
+        ))}
+      </View>
     </View>
   );
 }
