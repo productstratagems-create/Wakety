@@ -187,7 +187,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             {calendarStatus === 'error' && (
               <Text style={styles.calendarHint}>
                 {Platform.OS === 'web'
-                  ? "Couldn't read that file. Make sure it's a valid .ics calendar export."
+                  ? "Couldn't read that file. Make sure it's a valid .ics or .zip calendar export."
                   : "Couldn't read your calendar. Try again later."}
               </Text>
             )}
