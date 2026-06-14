@@ -13,6 +13,7 @@ import { guessAnchorType } from '../data/guessAnchorType';
 import { AnchorType, Rigidity, UserPlan } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
 import { ANCHOR_ICONS } from './AnchorTag';
+import { IcsImportButton, IcsImportResult } from './IcsImportButton';
 
 interface Props {
   initialPlan: UserPlan | null;
@@ -104,6 +105,15 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     }
   }
 
+  function handleIcsResult(result: IcsImportResult) {
+    if (result.status === 'ok') {
+      setCalendarEvents(result.events);
+      setCalendarStatus('picking');
+    } else {
+      setCalendarStatus(result.status);
+    }
+  }
+
   function handleSelectEvent(event: CalendarEvent) {
     const [hour, minute] = event.time.split(':');
     setHasAnchor(true);
@@ -133,40 +143,53 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
         {hasAnchor && (
           <>
-            {Platform.OS !== 'web' && (
-              <>
-                <Pressable
-                  style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
-                  onPress={handleImportFromCalendar}
-                >
-                  <Text style={styles.calendarButtonText}>
-                    {calendarStatus === 'loading' ? 'Looking…' : '📅 Import from calendar'}
-                  </Text>
-                </Pressable>
+            {Platform.OS !== 'web' ? (
+              <Pressable
+                style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
+                onPress={handleImportFromCalendar}
+              >
+                <Text style={styles.calendarButtonText}>
+                  {calendarStatus === 'loading' ? 'Looking…' : '📅 Import from calendar'}
+                </Text>
+              </Pressable>
+            ) : (
+              <IcsImportButton
+                onResult={handleIcsResult}
+                buttonStyle={styles.calendarButton}
+                pressedStyle={styles.pressed}
+                textStyle={styles.calendarButtonText}
+              />
+            )}
 
-                {calendarStatus === 'picking' && (
-                  <View style={styles.wrapRow}>
-                    {calendarEvents.map((event, index) => (
-                      <Chip
-                        key={`${event.time}-${event.title}-${index}`}
-                        label={`${event.time} — ${event.title}`}
-                        active={false}
-                        onPress={() => handleSelectEvent(event)}
-                      />
-                    ))}
-                  </View>
-                )}
+            {calendarStatus === 'picking' && (
+              <View style={styles.wrapRow}>
+                {calendarEvents.map((event, index) => (
+                  <Chip
+                    key={`${event.time}-${event.title}-${index}`}
+                    label={`${event.time} — ${event.title}`}
+                    active={false}
+                    onPress={() => handleSelectEvent(event)}
+                  />
+                ))}
+              </View>
+            )}
 
-                {calendarStatus === 'denied' && (
-                  <Text style={styles.calendarHint}>Calendar access was denied.</Text>
-                )}
-                {calendarStatus === 'empty' && (
-                  <Text style={styles.calendarHint}>No events found on your calendar for tomorrow.</Text>
-                )}
-                {calendarStatus === 'error' && (
-                  <Text style={styles.calendarHint}>Couldn't read your calendar. Try again later.</Text>
-                )}
-              </>
+            {calendarStatus === 'denied' && (
+              <Text style={styles.calendarHint}>Calendar access was denied.</Text>
+            )}
+            {calendarStatus === 'empty' && (
+              <Text style={styles.calendarHint}>
+                {Platform.OS === 'web'
+                  ? "No events found for tomorrow in that file."
+                  : 'No events found on your calendar for tomorrow.'}
+              </Text>
+            )}
+            {calendarStatus === 'error' && (
+              <Text style={styles.calendarHint}>
+                {Platform.OS === 'web'
+                  ? "Couldn't read that file. Make sure it's a valid .ics calendar export."
+                  : "Couldn't read your calendar. Try again later."}
+              </Text>
             )}
 
             <Text style={styles.sectionLabel}>What kind of event?</Text>
