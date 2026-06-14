@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props) {
-  const { anchor, recommendation } = profile;
+  const { anchor, anchors, recommendation } = profile;
 
   if (!recommendation || !anchor) return null;
 
@@ -38,6 +38,9 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
 
       <View style={styles.anchorRow}>
         <AnchorTag anchor={anchor} />
+        {anchors.slice(1).map((extra, index) => (
+          <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
+        ))}
       </View>
 
       {confirmed ? (
@@ -116,6 +119,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   anchorRow: {
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 52,
   },
   actions: {

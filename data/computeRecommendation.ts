@@ -20,32 +20,44 @@ function fromMinutes(mins: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-function buildExplanation(plan: UserPlan, leaveByTime: string): string {
-  const { anchor, personalChain } = plan;
-  const noun = ANCHOR_NOUNS[anchor!.type];
+function buildExplanation(anchor: UserPlan['anchors'][number], extraCount: number, personalChain: UserPlan['personalChain'], leaveByTime: string): string {
+  const noun = ANCHOR_NOUNS[anchor.type];
 
+  let explanation: string;
   if (personalChain.bufferMinutes >= 30) {
-    return `Leaving by ${leaveByTime} gives you a solid buffer (${personalChain.bufferMinutes} min) for ${noun}.`;
+    explanation = `Leaving by ${leaveByTime} gives you a solid buffer (${personalChain.bufferMinutes} min) for ${noun}.`;
+  } else if (personalChain.bufferMinutes <= 5) {
+    explanation = `It's tight — leaving by ${leaveByTime} gets you to ${anchor.label} right on time for ${noun}.`;
+  } else {
+    explanation = `Leaving by ${leaveByTime} gives you a comfortable margin for ${noun}.`;
   }
-  if (personalChain.bufferMinutes <= 5) {
-    return `It's tight — leaving by ${leaveByTime} gets you to ${anchor!.label} right on time for ${noun}.`;
+
+  if (extraCount === 1) {
+    explanation += ` You've also got something else lined up tomorrow.`;
+  } else if (extraCount > 1) {
+    explanation += ` You've also got ${extraCount} more things lined up tomorrow.`;
   }
-  return `Leaving by ${leaveByTime} gives you a comfortable margin for ${noun}.`;
+
+  return explanation;
 }
 
 export function computeDayProfile(plan: UserPlan): DayProfile {
-  if (!plan.hasAnchor || !plan.anchor) {
+  if (!plan.hasAnchor || plan.anchors.length === 0) {
     return {
       id: plan.id,
       label: plan.label ?? 'Tomorrow',
       anchor: null,
+      anchors: [],
       personalChain: plan.personalChain,
       conditions: { type: 'normal', detail: 'Nothing significant tomorrow.' },
       recommendation: null,
     };
   }
 
-  const { anchor, personalChain } = plan;
+  const { personalChain } = plan;
+  const sortedAnchors = [...plan.anchors].sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+  const anchor = sortedAnchors[0];
+
   const leaveByMins = toMinutes(anchor.time) - (personalChain.commuteMinutes + personalChain.bufferMinutes);
   const wakeMins = leaveByMins - personalChain.prepMinutes;
 
@@ -56,12 +68,13 @@ export function computeDayProfile(plan: UserPlan): DayProfile {
     id: plan.id,
     label: plan.label ?? 'Tomorrow',
     anchor,
+    anchors: sortedAnchors,
     personalChain,
     conditions: { type: 'normal', detail: 'All clear on your usual route.' },
     recommendation: {
       wakeTime,
       leaveByTime,
-      explanation: buildExplanation(plan, leaveByTime),
+      explanation: buildExplanation(anchor, sortedAnchors.length - 1, personalChain, leaveByTime),
     },
   };
 }

@@ -7,7 +7,12 @@ export async function loadUserPlan(): Promise<UserPlan | null> {
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as UserPlan;
+    const parsed = JSON.parse(raw) as UserPlan & { anchor?: UserPlan['anchors'][number] | null };
+    if (!parsed.anchors) {
+      parsed.anchors = parsed.anchor ? [parsed.anchor] : [];
+    }
+    delete parsed.anchor;
+    return parsed;
   } catch {
     return null;
   }

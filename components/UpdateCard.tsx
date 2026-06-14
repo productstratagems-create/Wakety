@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function UpdateCard({ profile, onConfirm }: Props) {
-  const { anchor, recommendation, overnightTwist } = profile;
+  const { anchor, anchors, recommendation, overnightTwist } = profile;
 
   if (!overnightTwist || !anchor || !recommendation) return null;
 
@@ -36,6 +36,9 @@ export function UpdateCard({ profile, onConfirm }: Props) {
 
       <View style={styles.anchorRow}>
         <AnchorTag anchor={anchor} />
+        {anchors.slice(1).map((extra, index) => (
+          <AnchorTag key={`${extra.time}-${extra.label}-${index}`} anchor={extra} compact />
+        ))}
       </View>
 
       <Pressable
@@ -114,6 +117,8 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   anchorRow: {
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 48,
   },
   primary: {

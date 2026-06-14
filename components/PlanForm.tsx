@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +21,15 @@ interface Props {
   onCancel?: () => void;
 }
 
+interface AnchorDraft {
+  key: string;
+  type: AnchorType | null;
+  label: string;
+  hour: string;
+  minute: string;
+  rigidity: Rigidity | null;
+}
+
 const NUMBER_REGEX = /^\d+$/;
 
 const ANCHOR_TYPES: AnchorType[] = ['school_run', 'flight', 'interview', 'meeting', 'appointment'];
@@ -33,14 +42,25 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
 };
 const RIGIDITY_OPTIONS: Rigidity[] = ['hard', 'medium', 'flexible'];
 
+function emptyDraft(key: string): AnchorDraft {
+  return { key, type: null, label: '', hour: '', minute: '', rigidity: null };
+}
+
+function isEmptyDraft(draft: AnchorDraft): boolean {
+  return !draft.type && !draft.label.trim() && !draft.hour && !draft.minute && !draft.rigidity;
+}
+
 export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   const [hasAnchor, setHasAnchor] = useState(initialPlan?.hasAnchor ?? true);
-  const [anchorType, setAnchorType] = useState<AnchorType | null>(initialPlan?.anchor?.type ?? null);
-  const [anchorLabel, setAnchorLabel] = useState(initialPlan?.anchor?.label ?? '');
-  const [initialHour, initialMinute] = (initialPlan?.anchor?.time ?? '').split(':');
-  const [anchorHour, setAnchorHour] = useState(initialHour ?? '');
-  const [anchorMinute, setAnchorMinute] = useState(initialMinute ?? '');
-  const [rigidity, setRigidity] = useState<Rigidity | null>(initialPlan?.anchor?.rigidity ?? null);
+  const [anchors, setAnchors] = useState<AnchorDraft[]>(() => {
+    if (initialPlan?.anchors && initialPlan.anchors.length > 0) {
+      return initialPlan.anchors.map((anchor, index) => {
+        const [hour, minute] = anchor.time.split(':');
+        return { key: `init-${index}`, type: anchor.type, label: anchor.label, hour, minute, rigidity: anchor.rigidity };
+      });
+    }
+    return (initialPlan?.hasAnchor ?? true) ? [emptyDraft('init-0')] : [];
+  });
   const [prepMinutes, setPrepMinutes] = useState(String(initialPlan?.personalChain.prepMinutes ?? ''));
   const [commuteMinutes, setCommuteMinutes] = useState(String(initialPlan?.personalChain.commuteMinutes ?? ''));
   const [bufferMinutes, setBufferMinutes] = useState(String(initialPlan?.personalChain.bufferMinutes ?? ''));
@@ -50,15 +70,26 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   >('idle');
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const { importTomorrowEvents } = useCalendarImport();
+  const keyCounter = useRef(0);
+
+  function nextKey(): string {
+    keyCounter.current += 1;
+    return `anchor-${keyCounter.current}`;
+  }
 
   const errors: Partial<Record<string, string>> = {};
   if (hasAnchor) {
-    if (!anchorType) errors.anchorType = 'Pick a type';
-    if (!anchorLabel.trim()) errors.anchorLabel = 'Required';
-    const hourValid = NUMBER_REGEX.test(anchorHour) && Number(anchorHour) <= 23;
-    const minuteValid = NUMBER_REGEX.test(anchorMinute) && Number(anchorMinute) <= 59;
-    if (!hourValid || !minuteValid) errors.anchorTime = 'Enter a valid 24h time';
-    if (!rigidity) errors.rigidity = 'Pick one';
+    if (anchors.length === 0) {
+      errors.anchors = 'Add at least one event, or switch to quiet day.';
+    }
+    for (const anchor of anchors) {
+      if (!anchor.type) errors[`${anchor.key}.type`] = 'Pick a type';
+      if (!anchor.label.trim()) errors[`${anchor.key}.label`] = 'Required';
+      const hourValid = NUMBER_REGEX.test(anchor.hour) && Number(anchor.hour) <= 23;
+      const minuteValid = NUMBER_REGEX.test(anchor.minute) && Number(anchor.minute) <= 59;
+      if (!hourValid || !minuteValid) errors[`${anchor.key}.time`] = 'Enter a valid 24h time';
+      if (!anchor.rigidity) errors[`${anchor.key}.rigidity`] = 'Pick one';
+    }
   }
   if (prepMinutes !== '' && !NUMBER_REGEX.test(prepMinutes)) errors.prepMinutes = 'Whole number';
   if (commuteMinutes !== '' && !NUMBER_REGEX.test(commuteMinutes)) errors.commuteMinutes = 'Whole number';
@@ -76,14 +107,14 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
       id: 'user-plan',
       label: 'Tomorrow',
       hasAnchor,
-      anchor: hasAnchor
-        ? {
-            type: anchorType!,
-            label: anchorLabel.trim(),
-            time: `${anchorHour.padStart(2, '0')}:${anchorMinute.padStart(2, '0')}`,
-            rigidity: rigidity!,
-          }
-        : null,
+      anchors: hasAnchor
+        ? anchors.map((anchor) => ({
+            type: anchor.type!,
+            label: anchor.label.trim(),
+            time: `${anchor.hour.padStart(2, '0')}:${anchor.minute.padStart(2, '0')}`,
+            rigidity: anchor.rigidity!,
+          }))
+        : [],
       personalChain: {
         prepMinutes: parseInt(prepMinutes || '0', 10),
         commuteMinutes: parseInt(commuteMinutes || '0', 10),
@@ -92,6 +123,25 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     };
 
     onSubmit(plan);
+  }
+
+  function handleSetHasAnchor(value: boolean) {
+    setHasAnchor(value);
+    if (value && anchors.length === 0) {
+      setAnchors([emptyDraft(nextKey())]);
+    }
+  }
+
+  function handleAddAnchor() {
+    setAnchors((prev) => [...prev, emptyDraft(nextKey())]);
+  }
+
+  function handleRemoveAnchor(key: string) {
+    setAnchors((prev) => prev.filter((anchor) => anchor.key !== key));
+  }
+
+  function updateAnchor(key: string, patch: Partial<AnchorDraft>) {
+    setAnchors((prev) => prev.map((anchor) => (anchor.key === key ? { ...anchor, ...patch } : anchor)));
   }
 
   async function handleImportFromCalendar() {
@@ -116,15 +166,17 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
   function handleSelectEvent(event: CalendarEvent) {
     const [hour, minute] = event.time.split(':');
-    setHasAnchor(true);
-    setAnchorLabel(event.title);
-    setAnchorHour(hour);
-    setAnchorMinute(minute);
     const guessedType = guessAnchorType(event.title);
-    if (guessedType) {
-      setAnchorType(guessedType);
-    }
-    setCalendarStatus('idle');
+    const filled: AnchorDraft = { key: nextKey(), type: guessedType, label: event.title, hour, minute, rigidity: 'medium' };
+
+    setHasAnchor(true);
+    setAnchors((prev) => (prev.length === 1 && isEmptyDraft(prev[0]) ? [filled] : [...prev, filled]));
+
+    setCalendarEvents((prev) => {
+      const remaining = prev.filter((e) => e !== event);
+      setCalendarStatus(remaining.length > 0 ? 'picking' : 'idle');
+      return remaining;
+    });
   }
 
   return (
@@ -137,8 +189,8 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
         <Text style={styles.sectionLabel}>Anything important tomorrow?</Text>
         <View style={styles.row}>
-          <Chip label="Yes" active={hasAnchor} onPress={() => setHasAnchor(true)} />
-          <Chip label="No — quiet day" active={!hasAnchor} onPress={() => setHasAnchor(false)} />
+          <Chip label="Yes" active={hasAnchor} onPress={() => handleSetHasAnchor(true)} />
+          <Chip label="No — quiet day" active={!hasAnchor} onPress={() => handleSetHasAnchor(false)} />
         </View>
 
         {hasAnchor && (
@@ -162,16 +214,20 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             )}
 
             {calendarStatus === 'picking' && (
-              <View style={styles.wrapRow}>
-                {calendarEvents.map((event, index) => (
-                  <Chip
-                    key={`${event.time}-${event.title}-${index}`}
-                    label={`${event.time} — ${event.title}`}
-                    active={false}
-                    onPress={() => handleSelectEvent(event)}
-                  />
-                ))}
-              </View>
+              <>
+                <Text style={styles.calendarHint}>Tap each event you'd like to add:</Text>
+                <View style={styles.wrapRow}>
+                  {calendarEvents.map((event, index) => (
+                    <Chip
+                      key={`${event.time}-${event.title}-${index}`}
+                      label={`${event.time} — ${event.title}`}
+                      active={false}
+                      onPress={() => handleSelectEvent(event)}
+                    />
+                  ))}
+                  <Chip label="Done" active onPress={() => setCalendarStatus('idle')} />
+                </View>
+              </>
             )}
 
             {calendarStatus === 'denied' && (
@@ -192,65 +248,87 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
               </Text>
             )}
 
-            <Text style={styles.sectionLabel}>What kind of event?</Text>
-            <View style={styles.wrapRow}>
-              {ANCHOR_TYPES.map((type) => (
-                <Chip
-                  key={type}
-                  label={`${ANCHOR_ICONS[type]} ${ANCHOR_LABELS[type]}`}
-                  active={anchorType === type}
-                  onPress={() => setAnchorType(type)}
+            <FieldError visible={showErrors} message={errors.anchors} />
+
+            {anchors.map((anchor, index) => (
+              <View key={anchor.key} style={styles.anchorCard}>
+                <View style={styles.anchorCardHeader}>
+                  <Text style={styles.anchorCardTitle}>Event {index + 1}</Text>
+                  {anchors.length > 1 && (
+                    <Pressable onPress={() => handleRemoveAnchor(anchor.key)}>
+                      <Text style={styles.removeText}>Remove</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                <Text style={styles.sectionLabel}>What kind of event?</Text>
+                <View style={styles.wrapRow}>
+                  {ANCHOR_TYPES.map((type) => (
+                    <Chip
+                      key={type}
+                      label={`${ANCHOR_ICONS[type]} ${ANCHOR_LABELS[type]}`}
+                      active={anchor.type === type}
+                      onPress={() => updateAnchor(anchor.key, { type })}
+                    />
+                  ))}
+                </View>
+                <FieldError visible={showErrors} message={errors[`${anchor.key}.type`]} />
+
+                <Text style={styles.sectionLabel}>Describe it</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Oliver's school drop-off"
+                  placeholderTextColor="#3D5A70"
+                  value={anchor.label}
+                  onChangeText={(text) => updateAnchor(anchor.key, { label: text })}
                 />
-              ))}
-            </View>
-            <FieldError visible={showErrors} message={errors.anchorType} />
+                <FieldError visible={showErrors} message={errors[`${anchor.key}.label`]} />
 
-            <Text style={styles.sectionLabel}>Describe it</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Oliver's school drop-off"
-              placeholderTextColor="#3D5A70"
-              value={anchorLabel}
-              onChangeText={setAnchorLabel}
-            />
-            <FieldError visible={showErrors} message={errors.anchorLabel} />
+                <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
+                <View style={styles.timeRow}>
+                  <TextInput
+                    style={styles.timeInput}
+                    placeholder="HH"
+                    placeholderTextColor="#3D5A70"
+                    value={anchor.hour}
+                    onChangeText={(text) => updateAnchor(anchor.key, { hour: text.replace(/[^0-9]/g, '').slice(0, 2) })}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={styles.timeSeparator}>:</Text>
+                  <TextInput
+                    style={styles.timeInput}
+                    placeholder="MM"
+                    placeholderTextColor="#3D5A70"
+                    value={anchor.minute}
+                    onChangeText={(text) => updateAnchor(anchor.key, { minute: text.replace(/[^0-9]/g, '').slice(0, 2) })}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <FieldError visible={showErrors} message={errors[`${anchor.key}.time`]} />
 
-            <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
-            <View style={styles.timeRow}>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="HH"
-                placeholderTextColor="#3D5A70"
-                value={anchorHour}
-                onChangeText={(text) => setAnchorHour(text.replace(/[^0-9]/g, '').slice(0, 2))}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-              <Text style={styles.timeSeparator}>:</Text>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="MM"
-                placeholderTextColor="#3D5A70"
-                value={anchorMinute}
-                onChangeText={(text) => setAnchorMinute(text.replace(/[^0-9]/g, '').slice(0, 2))}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-            </View>
-            <FieldError visible={showErrors} message={errors.anchorTime} />
+                <Text style={styles.sectionLabel}>How fixed is the time?</Text>
+                <View style={styles.row}>
+                  {RIGIDITY_OPTIONS.map((option) => (
+                    <Chip
+                      key={option}
+                      label={option.charAt(0).toUpperCase() + option.slice(1)}
+                      active={anchor.rigidity === option}
+                      onPress={() => updateAnchor(anchor.key, { rigidity: option })}
+                    />
+                  ))}
+                </View>
+                <FieldError visible={showErrors} message={errors[`${anchor.key}.rigidity`]} />
+              </View>
+            ))}
 
-            <Text style={styles.sectionLabel}>How fixed is the time?</Text>
-            <View style={styles.row}>
-              {RIGIDITY_OPTIONS.map((option) => (
-                <Chip
-                  key={option}
-                  label={option.charAt(0).toUpperCase() + option.slice(1)}
-                  active={rigidity === option}
-                  onPress={() => setRigidity(option)}
-                />
-              ))}
-            </View>
-            <FieldError visible={showErrors} message={errors.rigidity} />
+            <Pressable
+              style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+              onPress={handleAddAnchor}
+            >
+              <Text style={styles.secondaryText}>+ Add another event</Text>
+            </Pressable>
           </>
         )}
 
@@ -455,6 +533,28 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     fontSize: 13,
     marginBottom: 12,
+  },
+  anchorCard: {
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 18,
+  },
+  anchorCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  anchorCardTitle: {
+    fontSize: 13,
+    color: '#5A7A9A',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  removeText: {
+    color: '#E08A8A',
+    fontSize: 13,
   },
   pressed: {
     opacity: 0.7,

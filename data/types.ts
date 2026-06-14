@@ -13,16 +13,18 @@ export type ConditionType =
   | 'transit_disruption'
   | 'flight_delay';
 
+export interface AnchorEvent {
+  type: AnchorType;
+  label: string;
+  time: string;
+  rigidity: Rigidity;
+}
+
 export interface UserPlan {
   id: string;
   label?: string;
   hasAnchor: boolean;
-  anchor: {
-    type: AnchorType;
-    label: string;
-    time: string;
-    rigidity: Rigidity;
-  } | null;
+  anchors: AnchorEvent[];
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
@@ -33,12 +35,8 @@ export interface UserPlan {
 export interface DayProfile {
   id: string;
   label: string;
-  anchor: {
-    type: AnchorType;
-    label: string;
-    time: string;
-    rigidity: Rigidity;
-  } | null;
+  anchor: AnchorEvent | null;
+  anchors: AnchorEvent[];
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
