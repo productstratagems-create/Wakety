@@ -14,10 +14,33 @@ interface GeocoderFeature {
     id?: string;
     label?: string;
     name?: string;
+    category?: string[];
+    layer?: string;
   };
   geometry?: {
     coordinates?: [number, number];
   };
+}
+
+// Entur geocoder "category" values that mark a stop/station rather than a
+// generic place (address, venue, etc.) — multiple places can share a name
+// (e.g. "Majorstuen" the area vs. "Majorstuen" the T-bane station).
+const STOP_CATEGORIES = new Set([
+  'railStation',
+  'metroStation',
+  'busStation',
+  'onstreetBus',
+  'onstreetTram',
+  'tramStation',
+  'harbourPort',
+  'airport',
+  'ferryStop',
+  'GroupOfStopPlaces',
+  'StopPlace',
+]);
+
+export function isStopPlace(category?: string[]): boolean {
+  return !!category?.some((c) => STOP_CATEGORIES.has(c));
 }
 
 export async function searchLocations(query: string): Promise<LocationSuggestion[]> {
@@ -41,6 +64,7 @@ export async function searchLocations(query: string): Promise<LocationSuggestion
         name: feature.properties?.label ?? feature.properties?.name ?? '',
         lat,
         lon,
+        category: feature.properties?.category,
       };
     })
     .filter((suggestion): suggestion is LocationSuggestion =>

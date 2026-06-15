@@ -6,6 +6,20 @@ import { AnchorTag } from './AnchorTag';
 
 const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/Travel-Companion-/';
 
+/**
+ * Hands off the leg's stations and travel time to Travel Companion via
+ * query params (read by Travel Companion's main.js on load) so it opens
+ * pre-filled instead of on its defaults.
+ */
+function openTravelCompanion(leg: TravelLeg) {
+  const params = new URLSearchParams();
+  if (leg.fromLabel) params.set('from', leg.fromLabel);
+  if (leg.toLabel) params.set('to', leg.toLabel);
+  if (leg.travelMinutes) params.set('travelTime', String(leg.travelMinutes));
+  const query = params.toString();
+  Linking.openURL(query ? `${TRAVEL_COMPANION_URL}?${query}` : TRAVEL_COMPANION_URL);
+}
+
 interface Props {
   anchors: AnchorEvent[];
   travelLegs: TravelLeg[];
@@ -42,7 +56,7 @@ export function DayTimeline({ anchors, travelLegs }: Props) {
                     No {MODE_LABELS[leg.modeFallback]} route found — showing the best available route instead.
                   </Text>
                 )}
-                <Pressable onPress={() => Linking.openURL(TRAVEL_COMPANION_URL)}>
+                <Pressable onPress={() => openTravelCompanion(leg)}>
                   <Text style={styles.alternativesLink}>See alternatives →</Text>
                 </Pressable>
               </>

@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { LocationSuggestion } from '../data/entur';
+import { isStopPlace, LocationSuggestion } from '../data/entur';
 import { guessAnchorType } from '../data/guessAnchorType';
 import { AnchorLocation, AnchorType, Rigidity, TransportMode, UserPlan } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
@@ -500,7 +500,7 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
         onChangeQuery={(text) => onUpdate({ locationQuery: text, location: null })}
         onSelect={(suggestion) =>
           onUpdate({
-            location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
+            location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon, category: suggestion.category },
             locationQuery: suggestion.name,
           })
         }
@@ -515,7 +515,7 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
         onChangeQuery={(text) => onUpdate({ fromLocationQuery: text, fromLocation: null })}
         onSelect={(suggestion) =>
           onUpdate({
-            fromLocation: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon },
+            fromLocation: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon, category: suggestion.category },
             fromLocationQuery: suggestion.name,
           })
         }
@@ -570,6 +570,11 @@ function LocationField({ label, placeholder, query, location, onChangeQuery, onS
           </Pressable>
         )}
       </View>
+      {location && (
+        <Text style={styles.locationKind}>
+          {isStopPlace(location.category) ? '🚏 Stop / station' : '📍 Place'}
+        </Text>
+      )}
       {showSuggestions && (
         <View style={styles.suggestionList}>
           {loading ? (
@@ -581,7 +586,9 @@ function LocationField({ label, placeholder, query, location, onChangeQuery, onS
                 style={({ pressed }) => [styles.suggestionItem, pressed && styles.pressed]}
                 onPress={() => onSelect(suggestion)}
               >
-                <Text style={styles.suggestionText}>{suggestion.name}</Text>
+                <Text style={styles.suggestionText}>
+                  {isStopPlace(suggestion.category) ? '🚏' : '📍'} {suggestion.name}
+                </Text>
               </Pressable>
             ))
           )}
@@ -778,6 +785,11 @@ const styles = StyleSheet.create({
   },
   locationInput: {
     flex: 1,
+  },
+  locationKind: {
+    color: '#5A7A9A',
+    fontSize: 12,
+    marginTop: 6,
   },
   suggestionList: {
     marginTop: 8,

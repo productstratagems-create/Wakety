@@ -17,6 +17,7 @@ export interface AnchorLocation {
   name: string;
   lat: number;
   lon: number;
+  category?: string[];
 }
 
 export type TransportMode = 'walk' | 'bicycle' | 'car' | 'bus' | 'tram' | 'metro' | 'rail';
