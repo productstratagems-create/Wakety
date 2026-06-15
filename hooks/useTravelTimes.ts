@@ -11,6 +11,7 @@ export interface TravelLeg {
   tight: boolean;
   icon: string;
   leaveByTime: string;
+  error?: string;
 }
 
 const MODE_ICONS: Record<TransportMode, string> = {
@@ -70,12 +71,26 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
         const destination = anchor.location;
         if (!origin || !destination) continue;
 
-        const travelMinutes = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
-        if (travelMinutes == null) continue;
+        const { minutes: travelMinutes, error } = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
+        const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
+
+        if (travelMinutes == null) {
+          results.push({
+            key: `${anchor.time}-${anchor.label}`,
+            fromLabel,
+            toLabel: anchor.label,
+            travelMinutes: 0,
+            gapMinutes: null,
+            tight: false,
+            icon: DEFAULT_ICON,
+            leaveByTime: '',
+            error: error ?? 'No route found',
+          });
+          continue;
+        }
 
         const gapMinutes = previous ? toMinutes(anchor.time) - toMinutes(previous.time) : null;
         const tight = gapMinutes != null && travelMinutes > gapMinutes;
-        const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
         const icon = anchor.transportMode ? MODE_ICONS[anchor.transportMode] : DEFAULT_ICON;
         const leaveByTime = fromMinutes(toMinutes(anchor.time) - travelMinutes);
 

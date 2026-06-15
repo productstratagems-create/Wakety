@@ -30,8 +30,10 @@ export function DayTimeline({ anchors, travelLegs }: Props) {
             <AnchorTag anchor={anchor} compact={index > 0} />
             {leg && (
               <>
-                <Text style={leg.tight ? styles.travelWarning : styles.travelInfo}>
-                  {leg.tight
+                <Text style={leg.error ? styles.travelWarning : leg.tight ? styles.travelWarning : styles.travelInfo}>
+                  {leg.error
+                    ? `⚠ Couldn't get a travel time from ${leg.fromLabel} to ${leg.toLabel}: ${leg.error}`
+                    : leg.tight
                     ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
                     : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
                 </Text>

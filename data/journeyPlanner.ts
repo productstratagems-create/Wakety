@@ -46,17 +46,23 @@ function buildModes(transportMode?: TransportMode): Record<string, unknown> | un
   }
 }
 
+export interface TravelTimeResult {
+  minutes: number | null;
+  error: string | null;
+}
+
 /**
  * Returns the estimated travel time, in minutes, to go from `from` to `to`
  * and arrive by `arriveBy`, optionally restricted to `transportMode`.
- * Returns null if no route was found or the request failed.
+ * If no route was found or the request failed, `minutes` is null and
+ * `error` describes why.
  */
 export async function getTravelTimeMinutes(
   from: AnchorLocation,
   to: AnchorLocation,
   arriveBy: Date,
   transportMode?: TransportMode
-): Promise<number | null> {
+): Promise<TravelTimeResult> {
   try {
     const response = await fetch(ENDPOINT, {
       method: 'POST',
@@ -77,19 +83,20 @@ export async function getTravelTimeMinutes(
       }),
     });
     if (!response.ok) {
-      console.warn('Entur journey planner request failed', response.status, await response.text());
-      return null;
+      const body = await response.text();
+      return { minutes: null, error: `Request failed (${response.status}): ${body.slice(0, 200)}` };
     }
 
     const json = await response.json();
     if (json.errors) {
-      console.warn('Entur journey planner returned errors', json.errors);
-      return null;
+      return { minutes: null, error: JSON.stringify(json.errors).slice(0, 200) };
     }
     const duration = json?.data?.trip?.tripPatterns?.[0]?.duration;
-    return typeof duration === 'number' ? Math.round(duration / 60) : null;
+    if (typeof duration === 'number') {
+      return { minutes: Math.round(duration / 60), error: null };
+    }
+    return { minutes: null, error: 'No route found' };
   } catch (err) {
-    console.warn('Entur journey planner request threw', err);
-    return null;
+    return { minutes: null, error: err instanceof Error ? err.message : String(err) };
   }
 }
