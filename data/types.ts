@@ -27,6 +27,8 @@ export interface UserPlan {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
+    fromStation: string;
+    toStation: string;
   };
 }
 
@@ -43,6 +45,8 @@ export interface DayProfile {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
+    fromStation: string;
+    toStation: string;
   };
   conditions: {
     type: ConditionType;

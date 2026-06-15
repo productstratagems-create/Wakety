@@ -43,6 +43,8 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   const [prepMinutes, setPrepMinutes] = useState(String(initialPlan?.personalChain.prepMinutes ?? ''));
   const [commuteMinutes, setCommuteMinutes] = useState(String(initialPlan?.personalChain.commuteMinutes ?? ''));
   const [bufferMinutes, setBufferMinutes] = useState(String(initialPlan?.personalChain.bufferMinutes ?? ''));
+  const [fromStation, setFromStation] = useState(initialPlan?.personalChain.fromStation ?? '');
+  const [toStation, setToStation] = useState(initialPlan?.personalChain.toStation ?? '');
   const [showErrors, setShowErrors] = useState(false);
   const [calendarStatus, setCalendarStatus] = useState<
     'idle' | 'loading' | 'denied' | 'empty' | 'error' | 'unsupported' | 'picking'
@@ -87,6 +89,8 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
         prepMinutes: parseInt(prepMinutes || '0', 10),
         commuteMinutes: parseInt(commuteMinutes || '0', 10),
         bufferMinutes: parseInt(bufferMinutes || '0', 10),
+        fromStation: fromStation.trim(),
+        toStation: toStation.trim(),
       },
     };
 
@@ -263,6 +267,24 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
           keyboardType="numeric"
         />
         <FieldError visible={showErrors} message={errors.bufferMinutes} />
+
+        <Text style={styles.sectionLabel}>From station</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Mortensrud"
+          placeholderTextColor="#3D5A70"
+          value={fromStation}
+          onChangeText={setFromStation}
+        />
+
+        <Text style={styles.sectionLabel}>To station</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Jernbanetorget"
+          placeholderTextColor="#3D5A70"
+          value={toStation}
+          onChangeText={setToStation}
+        />
 
         <Pressable
           style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
