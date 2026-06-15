@@ -12,6 +12,8 @@ export interface TravelLeg {
   icon: string;
   leaveByTime: string;
   error?: string;
+  /** Set when the preferred mode had no route and this leg falls back to the best available route instead. */
+  modeFallback?: TransportMode;
 }
 
 const MODE_ICONS: Record<TransportMode, string> = {
@@ -22,6 +24,16 @@ const MODE_ICONS: Record<TransportMode, string> = {
   tram: '🚊',
   metro: '🚇',
   rail: '🚆',
+};
+
+export const MODE_LABELS: Record<TransportMode, string> = {
+  walk: 'walking',
+  bicycle: 'biking',
+  car: 'driving',
+  bus: 'bus',
+  tram: 'tram',
+  metro: 'T-bane',
+  rail: 'train',
 };
 
 const DEFAULT_ICON = '🚇';
@@ -71,7 +83,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
         const destination = anchor.location;
         if (!origin || !destination) continue;
 
-        const { minutes: travelMinutes, error } = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
+        const { minutes: travelMinutes, error, fallbackFromMode } = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
         const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
 
         if (travelMinutes == null) {
@@ -91,7 +103,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
 
         const gapMinutes = previous ? toMinutes(anchor.time) - toMinutes(previous.time) : null;
         const tight = gapMinutes != null && travelMinutes > gapMinutes;
-        const icon = anchor.transportMode ? MODE_ICONS[anchor.transportMode] : DEFAULT_ICON;
+        const icon = !fallbackFromMode && anchor.transportMode ? MODE_ICONS[anchor.transportMode] : DEFAULT_ICON;
         const leaveByTime = fromMinutes(toMinutes(anchor.time) - travelMinutes);
 
         results.push({
@@ -103,6 +115,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
           tight,
           icon,
           leaveByTime,
+          modeFallback: fallbackFromMode,
         });
       }
       if (!cancelled) setLegs(results);

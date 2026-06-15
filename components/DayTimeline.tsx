@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnchorEvent } from '../data/types';
-import { TravelLeg } from '../hooks/useTravelTimes';
+import { MODE_LABELS, TravelLeg } from '../hooks/useTravelTimes';
 import { AnchorTag } from './AnchorTag';
 
 const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/Travel-Companion-/';
@@ -37,6 +37,11 @@ export function DayTimeline({ anchors, travelLegs }: Props) {
                     ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
                     : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
                 </Text>
+                {leg.modeFallback && !leg.error && (
+                  <Text style={styles.travelWarning}>
+                    No {MODE_LABELS[leg.modeFallback]} route found — showing the best available route instead.
+                  </Text>
+                )}
                 <Pressable onPress={() => Linking.openURL(TRAVEL_COMPANION_URL)}>
                   <Text style={styles.alternativesLink}>See alternatives →</Text>
                 </Pressable>

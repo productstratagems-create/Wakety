@@ -40,7 +40,7 @@ function buildModes(transportMode?: TransportMode): Record<string, unknown> | un
     case 'tram':
     case 'metro':
     case 'rail':
-      return { transportModes: [{ transportMode }] };
+      return { accessMode: 'foot', egressMode: 'foot', transportModes: [{ transportMode }] };
     default:
       return undefined;
   }
@@ -49,20 +49,16 @@ function buildModes(transportMode?: TransportMode): Record<string, unknown> | un
 export interface TravelTimeResult {
   minutes: number | null;
   error: string | null;
+  /** Set when the preferred mode had no route and a no-restriction fallback was used instead. */
+  fallbackFromMode?: TransportMode;
 }
 
-/**
- * Returns the estimated travel time, in minutes, to go from `from` to `to`
- * and arrive by `arriveBy`, optionally restricted to `transportMode`.
- * If no route was found or the request failed, `minutes` is null and
- * `error` describes why.
- */
-export async function getTravelTimeMinutes(
+async function fetchTrip(
   from: AnchorLocation,
   to: AnchorLocation,
   arriveBy: Date,
-  transportMode?: TransportMode
-): Promise<TravelTimeResult> {
+  modes: Record<string, unknown> | undefined
+): Promise<{ minutes: number | null; error: string | null }> {
   try {
     const response = await fetch(ENDPOINT, {
       method: 'POST',
@@ -78,7 +74,7 @@ export async function getTravelTimeMinutes(
           toLat: to.lat,
           toLon: to.lon,
           arriveBy: arriveBy.toISOString(),
-          modes: buildModes(transportMode),
+          modes,
         },
       }),
     });
@@ -99,4 +95,28 @@ export async function getTravelTimeMinutes(
   } catch (err) {
     return { minutes: null, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Returns the estimated travel time, in minutes, to go from `from` to `to`
+ * and arrive by `arriveBy`, optionally restricted to `transportMode`.
+ * If the preferred mode has no route, falls back to an unrestricted trip
+ * search and flags the result via `fallbackFromMode`.
+ * If no route was found at all or the request failed, `minutes` is null
+ * and `error` describes why.
+ */
+export async function getTravelTimeMinutes(
+  from: AnchorLocation,
+  to: AnchorLocation,
+  arriveBy: Date,
+  transportMode?: TransportMode
+): Promise<TravelTimeResult> {
+  const preferred = await fetchTrip(from, to, arriveBy, buildModes(transportMode));
+  if (preferred.minutes != null || !transportMode) return preferred;
+
+  const fallback = await fetchTrip(from, to, arriveBy, buildModes(undefined));
+  if (fallback.minutes != null) {
+    return { ...fallback, fallbackFromMode: transportMode };
+  }
+  return preferred;
 }
