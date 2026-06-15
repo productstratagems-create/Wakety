@@ -14,7 +14,7 @@ const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/Travel-
 function openTravelCompanion(leg: TravelLeg) {
   const params = new URLSearchParams();
   if (leg.fromLabel) params.set('from', leg.fromLabel);
-  if (leg.toLabel) params.set('to', leg.toLabel);
+  if (leg.destination?.name) params.set('to', leg.destination.name);
   if (leg.travelMinutes) params.set('travelTime', String(leg.travelMinutes));
   if (leg.origin) {
     params.set('fromLat', String(leg.origin.lat));

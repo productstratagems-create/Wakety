@@ -86,7 +86,7 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
         if (!origin || !destination) continue;
 
         const { minutes: travelMinutes, error, fallbackFromMode } = await getTravelTimeMinutes(origin, destination, tomorrowAt(anchor.time), anchor.transportMode);
-        const fromLabel = anchor.fromLocation ? anchor.fromLocation.name : previous!.label;
+        const fromLabel = origin.name;
 
         if (travelMinutes == null) {
           results.push({
