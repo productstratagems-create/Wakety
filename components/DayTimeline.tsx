@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnchorEvent } from '../data/types';
 import { TravelLeg } from '../hooks/useTravelTimes';
 import { AnchorTag } from './AnchorTag';
+
+const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/Travel-Companion-/';
 
 interface Props {
   anchors: AnchorEvent[];
@@ -27,11 +29,16 @@ export function DayTimeline({ anchors, travelLegs }: Props) {
           <View key={`${anchor.time}-${anchor.label}-${index}`} style={styles.item}>
             <AnchorTag anchor={anchor} compact={index > 0} />
             {leg && (
-              <Text style={leg.tight ? styles.travelWarning : styles.travelInfo}>
-                {leg.tight
-                  ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
-                  : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
-              </Text>
+              <>
+                <Text style={leg.tight ? styles.travelWarning : styles.travelInfo}>
+                  {leg.tight
+                    ? `⚠ Only ${leg.gapMinutes} min between ${leg.fromLabel} and ${leg.toLabel}, but it's about a ${leg.travelMinutes} min trip — leave by ${leg.leaveByTime} to make it.`
+                    : `${leg.icon} ~${leg.travelMinutes} min from ${leg.fromLabel} to ${leg.toLabel} — leave by ${leg.leaveByTime}`}
+                </Text>
+                <Pressable onPress={() => Linking.openURL(TRAVEL_COMPANION_URL)}>
+                  <Text style={styles.alternativesLink}>See alternatives →</Text>
+                </Pressable>
+              </>
             )}
           </View>
         );
@@ -78,5 +85,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: 6,
     paddingHorizontal: 8,
+  },
+  alternativesLink: {
+    color: '#3D6080',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
