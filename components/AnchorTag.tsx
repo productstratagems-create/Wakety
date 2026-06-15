@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { DayProfile } from '../data/types';
+import { AnchorEvent, AnchorType } from '../data/types';
 
-export const ANCHOR_ICONS: Record<NonNullable<DayProfile['anchor']>['type'], string> = {
+export const ANCHOR_ICONS: Record<AnchorType, string> = {
   school_run: '🎒',
   flight: '✈️',
   interview: '💼',
@@ -11,15 +11,17 @@ export const ANCHOR_ICONS: Record<NonNullable<DayProfile['anchor']>['type'], str
 };
 
 interface Props {
-  anchor: NonNullable<DayProfile['anchor']>;
+  anchor: AnchorEvent;
+  compact?: boolean;
 }
 
-export function AnchorTag({ anchor }: Props) {
+export function AnchorTag({ anchor, compact }: Props) {
   const icon = ANCHOR_ICONS[anchor.type];
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      <Text style={[styles.text, compact && styles.textCompact]}>
         {icon}  {anchor.label} · {anchor.time}
+        {anchor.location && !compact ? ` · ${anchor.location.name}` : ''}
       </Text>
     </View>
   );
@@ -33,9 +35,17 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     alignSelf: 'center',
   },
+  containerCompact: {
+    backgroundColor: 'transparent',
+    paddingVertical: 3,
+  },
   text: {
     color: '#8A9BB5',
     fontSize: 13,
     letterSpacing: 0.2,
+  },
+  textCompact: {
+    color: '#5A7A9A',
+    fontSize: 12,
   },
 });

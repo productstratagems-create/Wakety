@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DayProfile } from '../data/types';
-import { AnchorTag } from './AnchorTag';
+import { useTravelTimes } from '../hooks/useTravelTimes';
+import { DayTimeline } from './DayTimeline';
 
 interface Props {
   profile: DayProfile;
@@ -9,34 +10,35 @@ interface Props {
 }
 
 export function UpdateCard({ profile, onConfirm }: Props) {
-  const { anchor, recommendation, overnightTwist } = profile;
+  const { anchor, anchors, recommendation, overnightTwist } = profile;
+  const travelLegs = useTravelTimes(anchors);
 
   if (!overnightTwist || !anchor || !recommendation) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>Updated</Text>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Updated</Text>
+        </View>
+
+        <Text style={styles.label}>Wake up at</Text>
+
+        <Text style={styles.time}>{overnightTwist.updatedWakeTime}</Text>
+
+        <Text style={styles.leaveBy}>
+          Leave by {overnightTwist.updatedLeaveByTime}
+        </Text>
+
+        <Text style={styles.explanation}>{overnightTwist.updatedExplanation}</Text>
+
+        <View style={styles.wasRow}>
+          <Text style={styles.wasLabel}>Was </Text>
+          <Text style={styles.wasTime}>{recommendation.wakeTime}</Text>
+        </View>
       </View>
 
-      <Text style={styles.label}>Wake up at</Text>
-
-      <Text style={styles.time}>{overnightTwist.updatedWakeTime}</Text>
-
-      <Text style={styles.leaveBy}>
-        Leave by {overnightTwist.updatedLeaveByTime}
-      </Text>
-
-      <Text style={styles.explanation}>{overnightTwist.updatedExplanation}</Text>
-
-      <View style={styles.wasRow}>
-        <Text style={styles.wasLabel}>Was </Text>
-        <Text style={styles.wasTime}>{recommendation.wakeTime}</Text>
-      </View>
-
-      <View style={styles.anchorRow}>
-        <AnchorTag anchor={anchor} />
-      </View>
+      <DayTimeline anchors={anchors} travelLegs={travelLegs} />
 
       <Pressable
         style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
@@ -44,16 +46,21 @@ export function UpdateCard({ profile, onConfirm }: Props) {
       >
         <Text style={styles.primaryText}>Got it</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 24,
+    gap: 28,
+  },
+  hero: {
+    alignItems: 'center',
   },
   badge: {
     backgroundColor: '#1E3A2A',
@@ -96,13 +103,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: '300',
-    marginBottom: 20,
     paddingHorizontal: 8,
   },
   wasRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 28,
+    marginTop: 20,
   },
   wasLabel: {
     fontSize: 13,
@@ -112,9 +118,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#3D5A70',
     textDecorationLine: 'line-through',
-  },
-  anchorRow: {
-    marginBottom: 48,
   },
   primary: {
     backgroundColor: '#1E3A2A',

@@ -13,40 +13,45 @@ export type ConditionType =
   | 'transit_disruption'
   | 'flight_delay';
 
+export interface AnchorLocation {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+export type TransportMode = 'walk' | 'bicycle' | 'car' | 'bus' | 'tram' | 'metro' | 'rail';
+
+export interface AnchorEvent {
+  type: AnchorType;
+  label: string;
+  time: string;
+  rigidity: Rigidity;
+  location?: AnchorLocation;
+  fromLocation?: AnchorLocation;
+  transportMode?: TransportMode;
+}
+
 export interface UserPlan {
   id: string;
   label?: string;
   hasAnchor: boolean;
-  anchor: {
-    type: AnchorType;
-    label: string;
-    time: string;
-    rigidity: Rigidity;
-  } | null;
+  anchors: AnchorEvent[];
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
-    fromStation: string;
-    toStation: string;
   };
 }
 
 export interface DayProfile {
   id: string;
   label: string;
-  anchor: {
-    type: AnchorType;
-    label: string;
-    time: string;
-    rigidity: Rigidity;
-  } | null;
+  anchor: AnchorEvent | null;
+  anchors: AnchorEvent[];
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
-    fromStation: string;
-    toStation: string;
   };
   conditions: {
     type: ConditionType;

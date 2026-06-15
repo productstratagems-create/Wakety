@@ -1,16 +1,14 @@
 import React from 'react';
 import {
-  Animated,
-  Linking,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { DayProfile } from '../data/types';
-import { AnchorTag } from './AnchorTag';
-
-const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/travel-companion-/';
+import { useTravelTimes } from '../hooks/useTravelTimes';
+import { DayTimeline } from './DayTimeline';
 
 interface Props {
   profile: DayProfile;
@@ -20,49 +18,29 @@ interface Props {
 }
 
 export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props) {
-  const { anchor, recommendation } = profile;
+  const { anchor, anchors, recommendation } = profile;
+  const travelLegs = useTravelTimes(anchors);
 
   if (!recommendation || !anchor) return null;
 
-  const { fromStation, toStation, commuteMinutes } = profile.personalChain;
-
-  function handleOpenTravelCompanion() {
-    const params = new URLSearchParams();
-    if (fromStation) params.set('from', fromStation);
-    if (toStation) params.set('to', toStation);
-    if (commuteMinutes) params.set('travelTime', String(commuteMinutes));
-    Linking.openURL(`${TRAVEL_COMPANION_URL}?${params.toString()}`);
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Wake up at</Text>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.hero}>
+        <Text style={styles.label}>Wake up at</Text>
 
-      <View style={styles.timeRow}>
-        <Text style={styles.time}>{recommendation.wakeTime}</Text>
-        {confirmed && <Text style={styles.check}>✓</Text>}
+        <View style={styles.timeRow}>
+          <Text style={styles.time}>{recommendation.wakeTime}</Text>
+          {confirmed && <Text style={styles.check}>✓</Text>}
+        </View>
+
+        <Text style={styles.leaveBy}>
+          Leave by {recommendation.leaveByTime}
+        </Text>
+
+        <Text style={styles.explanation}>{recommendation.explanation}</Text>
       </View>
 
-      <Text style={styles.leaveBy}>
-        Leave by {recommendation.leaveByTime}
-      </Text>
-
-      <Text style={styles.explanation}>{recommendation.explanation}</Text>
-
-      <View style={styles.anchorRow}>
-        <AnchorTag anchor={anchor} />
-      </View>
-
-      {!!(fromStation && toStation) && (
-        <Pressable
-          style={({ pressed }) => [styles.travelLink, pressed && styles.pressed]}
-          onPress={handleOpenTravelCompanion}
-        >
-          <Text style={styles.travelLinkText}>
-            🚌 {fromStation} → {toStation} in Travel Companion
-          </Text>
-        </Pressable>
-      )}
+      <DayTimeline anchors={anchors} travelLegs={travelLegs} />
 
       {confirmed ? (
         <View style={styles.confirmedBlock}>
@@ -88,16 +66,21 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
           </Pressable>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 24,
+    gap: 28,
+  },
+  hero: {
+    alignItems: 'center',
   },
   label: {
     fontSize: 14,
@@ -136,20 +119,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: '300',
-    marginBottom: 28,
     paddingHorizontal: 8,
-  },
-  anchorRow: {
-    marginBottom: 8,
-  },
-  travelLink: {
-    marginBottom: 44,
-  },
-  travelLinkText: {
-    color: '#5A7A9A',
-    fontSize: 13,
-    letterSpacing: 0.2,
-    textAlign: 'center',
   },
   actions: {
     width: '100%',
