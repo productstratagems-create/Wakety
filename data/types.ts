@@ -62,10 +62,4 @@ export interface DayProfile {
     leaveByTime: string;
     explanation: string;
   } | null;
-  overnightTwist?: {
-    triggerTime: string;
-    updatedWakeTime: string;
-    updatedLeaveByTime: string;
-    updatedExplanation: string;
-  };
 }

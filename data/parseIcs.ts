@@ -147,9 +147,10 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
   const lines = unfold(ics);
   const tomorrow = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate() + 1);
 
-  const events: { title: string; startDate: Date }[] = [];
+  const events: { title: string; location?: string; startDate: Date }[] = [];
   let inEvent = false;
   let summary: string | null = null;
+  let location: string | null = null;
   let startDate: Date | null = null;
   let rrule: RRule | null = null;
   let exDates: Date[] = [];
@@ -158,6 +159,7 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
     if (line === 'BEGIN:VEVENT') {
       inEvent = true;
       summary = null;
+      location = null;
       startDate = null;
       rrule = null;
       exDates = [];
@@ -166,7 +168,7 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
     if (line === 'END:VEVENT') {
       if (summary && startDate) {
         if (isSameDay(startDate, tomorrow)) {
-          events.push({ title: summary, startDate });
+          events.push({ title: summary, location: location ?? undefined, startDate });
         } else if (
           rrule &&
           occursOnDate(startDate, rrule, tomorrow) &&
@@ -174,7 +176,7 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
         ) {
           const occurrence = new Date(tomorrow);
           occurrence.setHours(startDate.getHours(), startDate.getMinutes(), startDate.getSeconds());
-          events.push({ title: summary, startDate: occurrence });
+          events.push({ title: summary, location: location ?? undefined, startDate: occurrence });
         }
       }
       inEvent = false;
@@ -189,6 +191,8 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
 
     if (key === 'SUMMARY' || key.startsWith('SUMMARY;')) {
       summary = unescapeText(value);
+    } else if (key === 'LOCATION' || key.startsWith('LOCATION;')) {
+      location = unescapeText(value);
     } else if (key === 'DTSTART' || key.startsWith('DTSTART;')) {
       if (key.includes('VALUE=DATE')) continue; // all-day event, no time to anchor on
       startDate = parseIcsDate(value);
@@ -204,5 +208,5 @@ export function parseIcsEvents(ics: string, referenceDate: Date = new Date()): C
 
   return events
     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-    .map(({ title, startDate }) => ({ title, time: toHHMM(startDate) }));
+    .map(({ title, location, startDate }) => ({ title, location, time: toHHMM(startDate) }));
 }

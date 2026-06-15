@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 export interface CalendarEvent {
   title: string;
   time: string;
+  location?: string;
 }
 
 export type ImportResult =
@@ -39,10 +40,11 @@ export function useCalendarImport() {
         .filter((event) => !event.allDay)
         .map((event) => ({
           title: event.title,
+          location: event.location || undefined,
           startDate: new Date(event.startDate),
         }))
         .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-        .map(({ title, startDate }) => ({ title, time: toHHMM(startDate) }));
+        .map(({ title, location, startDate }) => ({ title, location, time: toHHMM(startDate) }));
 
       if (events.length === 0) {
         return { status: 'empty' };

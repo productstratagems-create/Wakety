@@ -247,7 +247,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
       minute,
       rigidity: 'medium',
       location: null,
-      locationQuery: '',
+      locationQuery: event.location ?? '',
       fromLocation: null,
       fromLocationQuery: '',
       transportMode: null,

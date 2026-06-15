@@ -1,4 +1,5 @@
 import { AnchorType, DayProfile, UserPlan } from './types';
+import { TravelLeg } from '../hooks/useTravelTimes';
 
 const ANCHOR_NOUNS: Record<AnchorType, string> = {
   school_run: 'the drop-off',
@@ -20,7 +21,7 @@ function fromMinutes(mins: number): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-function buildExplanation(anchor: UserPlan['anchors'][number], extraCount: number, personalChain: UserPlan['personalChain'], leaveByTime: string): string {
+export function buildExplanation(anchor: UserPlan['anchors'][number], extraCount: number, personalChain: UserPlan['personalChain'], leaveByTime: string): string {
   const noun = ANCHOR_NOUNS[anchor.type];
 
   let explanation: string;
@@ -75,6 +76,33 @@ export function computeDayProfile(plan: UserPlan): DayProfile {
       wakeTime,
       leaveByTime,
       explanation: buildExplanation(anchor, sortedAnchors.length - 1, personalChain, leaveByTime),
+    },
+  };
+}
+
+/**
+ * Replaces the manual-commute-based recommendation with one based on a real
+ * travel-time estimate for the first event, when available. No-op if the leg
+ * couldn't be computed (no `fromLocation` set, or the lookup failed).
+ */
+export function applyTravelOverride(profile: DayProfile, firstLeg: TravelLeg | undefined): DayProfile {
+  const anchor = profile.anchors[0];
+  if (!profile.recommendation || !anchor || !firstLeg || firstLeg.error || typeof firstLeg.travelMinutes !== 'number') {
+    return profile;
+  }
+
+  const leaveByMins = toMinutes(anchor.time) - (firstLeg.travelMinutes + profile.personalChain.bufferMinutes);
+  const wakeMins = leaveByMins - profile.personalChain.prepMinutes;
+
+  const leaveByTime = fromMinutes(leaveByMins);
+  const wakeTime = fromMinutes(wakeMins);
+
+  return {
+    ...profile,
+    recommendation: {
+      wakeTime,
+      leaveByTime,
+      explanation: buildExplanation(anchor, profile.anchors.length - 1, profile.personalChain, leaveByTime),
     },
   };
 }
