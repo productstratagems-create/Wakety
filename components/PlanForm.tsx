@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LocationSuggestion } from '../data/entur';
 import { guessAnchorType } from '../data/guessAnchorType';
+import { parseAppointmentMessage } from '../data/parseMessage';
 import { AnchorLocation, AnchorType, Rigidity, TransportMode, UserPlan } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
 import { useLocationSearch } from '../hooks/useLocationSearch';
@@ -129,6 +130,9 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     'idle' | 'loading' | 'denied' | 'empty' | 'error' | 'unsupported' | 'picking'
   >('idle');
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteError, setPasteError] = useState(false);
   const { importTomorrowEvents } = useCalendarImport();
   const keyCounter = useRef(0);
 
@@ -263,6 +267,18 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
     });
   }
 
+  function handlePasteSubmit() {
+    const parsed = parseAppointmentMessage(pasteText);
+    if (!parsed) {
+      setPasteError(true);
+      return;
+    }
+    handleSelectEvent({ title: parsed.title, time: parsed.time, location: parsed.location });
+    setPasteText('');
+    setPasteError(false);
+    setPasteOpen(false);
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -295,6 +311,40 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
                 pressedStyle={styles.pressed}
                 textStyle={styles.calendarButtonText}
               />
+            )}
+
+            <Pressable
+              style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
+              onPress={() => setPasteOpen((open) => !open)}
+            >
+              <Text style={styles.calendarButtonText}>📋 Paste a reminder</Text>
+            </Pressable>
+
+            {pasteOpen && (
+              <>
+                <TextInput
+                  style={[styles.input, styles.pasteInput]}
+                  placeholder="Paste a text message or reminder…"
+                  placeholderTextColor="#3D5A70"
+                  value={pasteText}
+                  onChangeText={(text) => {
+                    setPasteText(text);
+                    setPasteError(false);
+                  }}
+                  multiline
+                />
+                {pasteError && (
+                  <Text style={styles.calendarHint}>
+                    Couldn't find a time in that text. Try including something like "kl 10.40".
+                  </Text>
+                )}
+                <Pressable
+                  style={({ pressed }) => [styles.addEventButton, pressed && styles.pressed]}
+                  onPress={handlePasteSubmit}
+                >
+                  <Text style={styles.secondaryText}>Add event from text</Text>
+                </Pressable>
+              </>
             )}
 
             {calendarStatus === 'picking' && (
@@ -748,6 +798,11 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     fontSize: 13,
     marginBottom: 12,
+  },
+  pasteInput: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 8,
   },
   anchorCard: {
     borderWidth: 1,
