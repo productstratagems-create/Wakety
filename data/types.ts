@@ -18,6 +18,8 @@ export interface AnchorLocation {
   lat: number;
   lon: number;
   category?: string[];
+  /** Entur NSR stop place ID, set when this location is a transit stop/station. */
+  stopId?: string;
 }
 
 export type TransportMode = 'walk' | 'bicycle' | 'car' | 'bus' | 'tram' | 'metro' | 'rail';

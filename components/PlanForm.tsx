@@ -500,7 +500,13 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
         onChangeQuery={(text) => onUpdate({ locationQuery: text, location: null })}
         onSelect={(suggestion) =>
           onUpdate({
-            location: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon, category: suggestion.category },
+            location: {
+              name: suggestion.name,
+              lat: suggestion.lat,
+              lon: suggestion.lon,
+              category: suggestion.category,
+              stopId: isStopPlace(suggestion.category) ? suggestion.id : undefined,
+            },
             locationQuery: suggestion.name,
           })
         }
@@ -515,7 +521,13 @@ function AnchorCard({ anchor, index, canRemove, errors, showErrors, onUpdate, on
         onChangeQuery={(text) => onUpdate({ fromLocationQuery: text, fromLocation: null })}
         onSelect={(suggestion) =>
           onUpdate({
-            fromLocation: { name: suggestion.name, lat: suggestion.lat, lon: suggestion.lon, category: suggestion.category },
+            fromLocation: {
+              name: suggestion.name,
+              lat: suggestion.lat,
+              lon: suggestion.lon,
+              category: suggestion.category,
+              stopId: isStopPlace(suggestion.category) ? suggestion.id : undefined,
+            },
             fromLocationQuery: suggestion.name,
           })
         }

@@ -16,6 +16,16 @@ function openTravelCompanion(leg: TravelLeg) {
   if (leg.fromLabel) params.set('from', leg.fromLabel);
   if (leg.toLabel) params.set('to', leg.toLabel);
   if (leg.travelMinutes) params.set('travelTime', String(leg.travelMinutes));
+  if (leg.origin) {
+    params.set('fromLat', String(leg.origin.lat));
+    params.set('fromLon', String(leg.origin.lon));
+    if (leg.origin.stopId) params.set('fromStopId', leg.origin.stopId);
+  }
+  if (leg.destination) {
+    params.set('toLat', String(leg.destination.lat));
+    params.set('toLon', String(leg.destination.lon));
+    if (leg.destination.stopId) params.set('toStopId', leg.destination.stopId);
+  }
   const query = params.toString();
   Linking.openURL(query ? `${TRAVEL_COMPANION_URL}?${query}` : TRAVEL_COMPANION_URL);
 }

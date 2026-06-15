@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getTravelTimeMinutes } from '../data/journeyPlanner';
-import { AnchorEvent, TransportMode } from '../data/types';
+import { AnchorLocation, AnchorEvent, TransportMode } from '../data/types';
 
 export interface TravelLeg {
   key: string;
@@ -12,6 +12,8 @@ export interface TravelLeg {
   icon: string;
   leaveByTime: string;
   error?: string;
+  origin?: AnchorLocation;
+  destination?: AnchorLocation;
   /** Set when the preferred mode had no route and this leg falls back to the best available route instead. */
   modeFallback?: TransportMode;
 }
@@ -97,6 +99,8 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
             icon: DEFAULT_ICON,
             leaveByTime: '',
             error: error ?? 'No route found',
+            origin,
+            destination,
           });
           continue;
         }
@@ -116,6 +120,8 @@ export function useTravelTimes(anchors: AnchorEvent[]): TravelLeg[] {
           icon,
           leaveByTime,
           modeFallback: fallbackFromMode,
+          origin,
+          destination,
         });
       }
       if (!cancelled) setLegs(results);
