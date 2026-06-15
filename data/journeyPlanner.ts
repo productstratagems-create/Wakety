@@ -76,12 +76,20 @@ export async function getTravelTimeMinutes(
         },
       }),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('Entur journey planner request failed', response.status, await response.text());
+      return null;
+    }
 
     const json = await response.json();
+    if (json.errors) {
+      console.warn('Entur journey planner returned errors', json.errors);
+      return null;
+    }
     const duration = json?.data?.trip?.tripPatterns?.[0]?.duration;
     return typeof duration === 'number' ? Math.round(duration / 60) : null;
-  } catch {
+  } catch (err) {
+    console.warn('Entur journey planner request threw', err);
     return null;
   }
 }
