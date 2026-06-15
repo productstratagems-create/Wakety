@@ -9,7 +9,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { guessAnchorType } from '../data/guessAnchorType';
 import { AnchorType, Rigidity, UserPlan } from '../data/types';
+import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
 import { ANCHOR_ICONS } from './AnchorTag';
 
 interface Props {
@@ -18,7 +20,6 @@ interface Props {
   onCancel?: () => void;
 }
 
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const NUMBER_REGEX = /^\d+$/;
 
 const ANCHOR_TYPES: AnchorType[] = ['school_run', 'flight', 'interview', 'meeting', 'appointment'];
@@ -35,18 +36,29 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
   const [hasAnchor, setHasAnchor] = useState(initialPlan?.hasAnchor ?? true);
   const [anchorType, setAnchorType] = useState<AnchorType | null>(initialPlan?.anchor?.type ?? null);
   const [anchorLabel, setAnchorLabel] = useState(initialPlan?.anchor?.label ?? '');
-  const [anchorTime, setAnchorTime] = useState(initialPlan?.anchor?.time ?? '');
+  const [initialHour, initialMinute] = (initialPlan?.anchor?.time ?? '').split(':');
+  const [anchorHour, setAnchorHour] = useState(initialHour ?? '');
+  const [anchorMinute, setAnchorMinute] = useState(initialMinute ?? '');
   const [rigidity, setRigidity] = useState<Rigidity | null>(initialPlan?.anchor?.rigidity ?? null);
   const [prepMinutes, setPrepMinutes] = useState(String(initialPlan?.personalChain.prepMinutes ?? ''));
   const [commuteMinutes, setCommuteMinutes] = useState(String(initialPlan?.personalChain.commuteMinutes ?? ''));
   const [bufferMinutes, setBufferMinutes] = useState(String(initialPlan?.personalChain.bufferMinutes ?? ''));
+  const [fromStation, setFromStation] = useState(initialPlan?.personalChain.fromStation ?? '');
+  const [toStation, setToStation] = useState(initialPlan?.personalChain.toStation ?? '');
   const [showErrors, setShowErrors] = useState(false);
+  const [calendarStatus, setCalendarStatus] = useState<
+    'idle' | 'loading' | 'denied' | 'empty' | 'error' | 'unsupported' | 'picking'
+  >('idle');
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const { importTomorrowEvents } = useCalendarImport();
 
   const errors: Partial<Record<string, string>> = {};
   if (hasAnchor) {
     if (!anchorType) errors.anchorType = 'Pick a type';
     if (!anchorLabel.trim()) errors.anchorLabel = 'Required';
-    if (!TIME_REGEX.test(anchorTime)) errors.anchorTime = 'Use 24h HH:MM';
+    const hourValid = NUMBER_REGEX.test(anchorHour) && Number(anchorHour) <= 23;
+    const minuteValid = NUMBER_REGEX.test(anchorMinute) && Number(anchorMinute) <= 59;
+    if (!hourValid || !minuteValid) errors.anchorTime = 'Enter a valid 24h time';
     if (!rigidity) errors.rigidity = 'Pick one';
   }
   if (prepMinutes !== '' && !NUMBER_REGEX.test(prepMinutes)) errors.prepMinutes = 'Whole number';
@@ -69,7 +81,7 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
         ? {
             type: anchorType!,
             label: anchorLabel.trim(),
-            time: anchorTime,
+            time: `${anchorHour.padStart(2, '0')}:${anchorMinute.padStart(2, '0')}`,
             rigidity: rigidity!,
           }
         : null,
@@ -77,10 +89,36 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
         prepMinutes: parseInt(prepMinutes || '0', 10),
         commuteMinutes: parseInt(commuteMinutes || '0', 10),
         bufferMinutes: parseInt(bufferMinutes || '0', 10),
+        fromStation: fromStation.trim(),
+        toStation: toStation.trim(),
       },
     };
 
     onSubmit(plan);
+  }
+
+  async function handleImportFromCalendar() {
+    setCalendarStatus('loading');
+    const result = await importTomorrowEvents();
+    if (result.status === 'ok') {
+      setCalendarEvents(result.events);
+      setCalendarStatus('picking');
+    } else {
+      setCalendarStatus(result.status);
+    }
+  }
+
+  function handleSelectEvent(event: CalendarEvent) {
+    const [hour, minute] = event.time.split(':');
+    setHasAnchor(true);
+    setAnchorLabel(event.title);
+    setAnchorHour(hour);
+    setAnchorMinute(minute);
+    const guessedType = guessAnchorType(event.title);
+    if (guessedType) {
+      setAnchorType(guessedType);
+    }
+    setCalendarStatus('idle');
   }
 
   return (
@@ -99,6 +137,42 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
 
         {hasAnchor && (
           <>
+            {Platform.OS !== 'web' && (
+              <>
+                <Pressable
+                  style={({ pressed }) => [styles.calendarButton, pressed && styles.pressed]}
+                  onPress={handleImportFromCalendar}
+                >
+                  <Text style={styles.calendarButtonText}>
+                    {calendarStatus === 'loading' ? 'Looking…' : '📅 Import from calendar'}
+                  </Text>
+                </Pressable>
+
+                {calendarStatus === 'picking' && (
+                  <View style={styles.wrapRow}>
+                    {calendarEvents.map((event, index) => (
+                      <Chip
+                        key={`${event.time}-${event.title}-${index}`}
+                        label={`${event.time} — ${event.title}`}
+                        active={false}
+                        onPress={() => handleSelectEvent(event)}
+                      />
+                    ))}
+                  </View>
+                )}
+
+                {calendarStatus === 'denied' && (
+                  <Text style={styles.calendarHint}>Calendar access was denied.</Text>
+                )}
+                {calendarStatus === 'empty' && (
+                  <Text style={styles.calendarHint}>No events found on your calendar for tomorrow.</Text>
+                )}
+                {calendarStatus === 'error' && (
+                  <Text style={styles.calendarHint}>Couldn't read your calendar. Try again later.</Text>
+                )}
+              </>
+            )}
+
             <Text style={styles.sectionLabel}>What kind of event?</Text>
             <View style={styles.wrapRow}>
               {ANCHOR_TYPES.map((type) => (
@@ -122,15 +196,28 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
             />
             <FieldError visible={showErrors} message={errors.anchorLabel} />
 
-            <Text style={styles.sectionLabel}>What time does it start?</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="HH:MM (24h), e.g. 08:30"
-              placeholderTextColor="#3D5A70"
-              value={anchorTime}
-              onChangeText={setAnchorTime}
-              keyboardType="numeric"
-            />
+            <Text style={styles.sectionLabel}>What time does it start? (24h)</Text>
+            <View style={styles.timeRow}>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="HH"
+                placeholderTextColor="#3D5A70"
+                value={anchorHour}
+                onChangeText={(text) => setAnchorHour(text.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.timeSeparator}>:</Text>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="MM"
+                placeholderTextColor="#3D5A70"
+                value={anchorMinute}
+                onChangeText={(text) => setAnchorMinute(text.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+            </View>
             <FieldError visible={showErrors} message={errors.anchorTime} />
 
             <Text style={styles.sectionLabel}>How fixed is the time?</Text>
@@ -180,6 +267,24 @@ export function PlanForm({ initialPlan, onSubmit, onCancel }: Props) {
           keyboardType="numeric"
         />
         <FieldError visible={showErrors} message={errors.bufferMinutes} />
+
+        <Text style={styles.sectionLabel}>From station</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Mortensrud"
+          placeholderTextColor="#3D5A70"
+          value={fromStation}
+          onChangeText={setFromStation}
+        />
+
+        <Text style={styles.sectionLabel}>To station</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Jernbanetorget"
+          placeholderTextColor="#3D5A70"
+          value={toStation}
+          onChangeText={setToStation}
+        />
 
         <Pressable
           style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
@@ -278,6 +383,28 @@ const styles = StyleSheet.create({
     color: '#F0F4F8',
     fontSize: 16,
   },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  timeInput: {
+    backgroundColor: '#0F1923',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    color: '#F0F4F8',
+    fontSize: 16,
+    width: 64,
+    textAlign: 'center',
+  },
+  timeSeparator: {
+    color: '#5A7A9A',
+    fontSize: 20,
+    fontWeight: '300',
+  },
   error: {
     color: '#E08A8A',
     fontSize: 12,
@@ -308,6 +435,25 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+  calendarButton: {
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E2D40',
+    backgroundColor: '#0F1923',
+    marginBottom: 12,
+  },
+  calendarButtonText: {
+    color: '#8A9BB5',
+    fontSize: 14,
+    letterSpacing: 0.3,
+  },
+  calendarHint: {
+    color: '#5A7A9A',
+    fontSize: 13,
+    marginBottom: 12,
   },
   pressed: {
     opacity: 0.7,
