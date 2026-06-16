@@ -1,35 +1,72 @@
 import { useEffect, useState } from 'react';
 import { computeDayProfile } from '../data/computeRecommendation';
-import { loadUserPlan, saveUserPlan } from '../data/storage';
-import { UserPlan } from '../data/types';
+import {
+  StoredDayConfirmation,
+  loadDayConfirmation,
+  loadPersonalSetup,
+  saveDayConfirmation,
+  savePersonalSetup,
+} from '../data/storage';
+import { AnchorType, DayProfile, PersonalSetup } from '../data/types';
+
+const BUFFER_MINUTES = 10;
+
+function todayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export function useUserPlan() {
-  const [plan, setPlan] = useState<UserPlan | null>(null);
+  const [setup, setSetup] = useState<PersonalSetup | null>(null);
+  const [dayConf, setDayConf] = useState<StoredDayConfirmation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    loadUserPlan().then((p) => {
-      setPlan(p);
+    Promise.all([loadPersonalSetup(), loadDayConfirmation()]).then(([s, d]) => {
+      setSetup(s);
+      setDayConf(d);
       setLoading(false);
     });
   }, []);
 
-  async function savePlan(newPlan: UserPlan) {
-    await saveUserPlan(newPlan);
-    setPlan(newPlan);
-    setConfirmed(false);
+  const today = todayString();
+  const setupComplete = setup !== null;
+  const anchorConfirmedToday = dayConf?.confirmedDate === today;
+
+  async function saveSetup(newSetup: PersonalSetup) {
+    await savePersonalSetup(newSetup);
+    setSetup(newSetup);
   }
 
-  function confirm() {
-    setConfirmed(true);
+  async function confirmAnchor(
+    anchor: { type: AnchorType; label: string; time: string } | null
+  ) {
+    const conf: StoredDayConfirmation = { confirmedDate: today, anchor };
+    await saveDayConfirmation(conf);
+    setDayConf(conf);
   }
 
-  function resetConfirmed() {
-    setConfirmed(false);
-  }
+  const dayProfile: DayProfile | null =
+    setup && anchorConfirmedToday
+      ? computeDayProfile({
+          id: 'user-plan',
+          label: 'Tomorrow',
+          anchor: dayConf?.anchor ?? null,
+          personalChain: {
+            prepMinutes: setup.prepMinutes,
+            commuteMinutes: setup.commuteMinutes,
+            bufferMinutes: BUFFER_MINUTES,
+          },
+        })
+      : null;
 
-  const dayProfile = plan ? computeDayProfile(plan) : null;
-
-  return { plan, dayProfile, loading, confirmed, savePlan, confirm, resetConfirmed };
+  return {
+    setup,
+    dayProfile,
+    loading,
+    setupComplete,
+    anchorConfirmedToday,
+    saveSetup,
+    confirmAnchor,
+  };
 }

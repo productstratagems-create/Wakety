@@ -5,6 +5,11 @@ export type AnchorType =
   | 'meeting'
   | 'appointment';
 
+export interface PersonalSetup {
+  prepMinutes: number;
+  commuteMinutes: number;
+}
+
 export type ConditionType =
   | 'normal'
   | 'traffic_heavy'
