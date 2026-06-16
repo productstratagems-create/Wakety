@@ -1,16 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AnchorConfirmCard } from './components/AnchorConfirmCard';
 import { AdvisoryCard } from './components/AdvisoryCard';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { QuietState } from './components/QuietState';
+import { SettingsOverlay } from './components/SettingsOverlay';
 import { UpdateCard } from './components/UpdateCard';
+import { PersonalSetup } from './data/types';
 import { useNotifications } from './hooks/useNotifications';
 import { useUserPlan } from './hooks/useUserPlan';
 
 export default function App() {
   const {
+    setup,
     dayProfile,
     loading,
     setupComplete,
@@ -27,6 +30,7 @@ export default function App() {
   } = useNotifications();
   const [adjusting, setAdjusting] = useState(false);
   const [advisoryConfirmed, setAdvisoryConfirmed] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   if (loading) {
     return <View style={styles.screen} />;
@@ -53,6 +57,11 @@ export default function App() {
   function handleUpdateConfirm() {
     resetNotificationState();
     cancelScheduled();
+  }
+
+  async function handleSettingsSave(newSetup: PersonalSetup) {
+    await saveSetup(newSetup);
+    setAdvisoryConfirmed(false);
   }
 
   function renderContent() {
@@ -87,8 +96,25 @@ export default function App() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <Text style={styles.wordmark}>Wakety</Text>
+
+      {setupComplete ? (
+        <Pressable onPress={() => setShowSettings(true)}>
+          <Text style={styles.wordmark}>Wakety</Text>
+        </Pressable>
+      ) : (
+        <Text style={styles.wordmark}>Wakety</Text>
+      )}
+
       {renderContent()}
+
+      {showSettings && setup && (
+        <SettingsOverlay
+          visible={showSettings}
+          setup={setup}
+          onSave={handleSettingsSave}
+          onDismiss={() => setShowSettings(false)}
+        />
+      )}
     </View>
   );
 }
