@@ -5,8 +5,6 @@ export type AnchorType =
   | 'meeting'
   | 'appointment';
 
-export type Rigidity = 'hard' | 'medium' | 'flexible';
-
 export type ConditionType =
   | 'normal'
   | 'traffic_heavy'
@@ -16,19 +14,15 @@ export type ConditionType =
 export interface UserPlan {
   id: string;
   label?: string;
-  hasAnchor: boolean;
   anchor: {
     type: AnchorType;
     label: string;
     time: string;
-    rigidity: Rigidity;
   } | null;
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
-    fromStation: string;
-    toStation: string;
   };
 }
 
@@ -39,14 +33,11 @@ export interface DayProfile {
     type: AnchorType;
     label: string;
     time: string;
-    rigidity: Rigidity;
   } | null;
   personalChain: {
     prepMinutes: number;
     commuteMinutes: number;
     bufferMinutes: number;
-    fromStation: string;
-    toStation: string;
   };
   conditions: {
     type: ConditionType;

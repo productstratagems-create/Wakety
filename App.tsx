@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AdvisoryCard } from './components/AdvisoryCard';
 import { PlanForm } from './components/PlanForm';
 import { QuietState } from './components/QuietState';
@@ -93,13 +93,7 @@ export default function App() {
           onCancel={dayProfile ? () => setEditing(false) : undefined}
         />
       ) : (
-        <>
-          {renderContent()}
-
-          <Pressable style={styles.editButton} onPress={() => setEditing(true)}>
-            <Text style={styles.editButtonText}>Edit plan</Text>
-          </Pressable>
-        </>
+        renderContent()
       )}
     </View>
   );

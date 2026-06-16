@@ -34,7 +34,7 @@ function buildExplanation(plan: UserPlan, leaveByTime: string): string {
 }
 
 export function computeDayProfile(plan: UserPlan): DayProfile {
-  if (!plan.hasAnchor || !plan.anchor) {
+  if (!plan.anchor) {
     return {
       id: plan.id,
       label: plan.label ?? 'Tomorrow',

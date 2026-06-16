@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  Animated,
-  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -9,8 +7,6 @@ import {
 } from 'react-native';
 import { DayProfile } from '../data/types';
 import { AnchorTag } from './AnchorTag';
-
-const TRAVEL_COMPANION_URL = 'https://productstratagems-create.github.io/travel-companion-/';
 
 interface Props {
   profile: DayProfile;
@@ -23,16 +19,6 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
   const { anchor, recommendation } = profile;
 
   if (!recommendation || !anchor) return null;
-
-  const { fromStation, toStation, commuteMinutes } = profile.personalChain;
-
-  function handleOpenTravelCompanion() {
-    const params = new URLSearchParams();
-    if (fromStation) params.set('from', fromStation);
-    if (toStation) params.set('to', toStation);
-    if (commuteMinutes) params.set('travelTime', String(commuteMinutes));
-    Linking.openURL(`${TRAVEL_COMPANION_URL}?${params.toString()}`);
-  }
 
   return (
     <View style={styles.container}>
@@ -52,17 +38,6 @@ export function AdvisoryCard({ profile, confirmed, onConfirm, onAdjust }: Props)
       <View style={styles.anchorRow}>
         <AnchorTag anchor={anchor} />
       </View>
-
-      {!!(fromStation && toStation) && (
-        <Pressable
-          style={({ pressed }) => [styles.travelLink, pressed && styles.pressed]}
-          onPress={handleOpenTravelCompanion}
-        >
-          <Text style={styles.travelLinkText}>
-            🚌 {fromStation} → {toStation} in Travel Companion
-          </Text>
-        </Pressable>
-      )}
 
       {confirmed ? (
         <View style={styles.confirmedBlock}>
@@ -140,16 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   anchorRow: {
-    marginBottom: 8,
-  },
-  travelLink: {
-    marginBottom: 44,
-  },
-  travelLinkText: {
-    color: '#5A7A9A',
-    fontSize: 13,
-    letterSpacing: 0.2,
-    textAlign: 'center',
+    marginBottom: 52,
   },
   actions: {
     width: '100%',
