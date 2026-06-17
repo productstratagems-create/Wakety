@@ -11,6 +11,7 @@ import {
 import { guessAnchorType } from '../data/guessAnchorType';
 import { AnchorType } from '../data/types';
 import { CalendarEvent, useCalendarImport } from '../hooks/useCalendarImport';
+import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { ANCHOR_ICONS } from './AnchorTag';
 
 type AnchorInput = { type: AnchorType; label: string; time: string };
@@ -28,7 +29,7 @@ const ANCHOR_LABELS: Record<AnchorType, string> = {
   appointment: 'Appointment',
 };
 
-type Mode = 'checking' | 'suggested' | 'quiet' | 'picking' | 'manual';
+type Mode = 'checking' | 'suggested' | 'quiet' | 'picking' | 'manual' | 'google_connect';
 
 export function AnchorConfirmCard({ onConfirm }: Props) {
   const [mode, setMode] = useState<Mode>('checking');
@@ -39,10 +40,29 @@ export function AnchorConfirmCard({ onConfirm }: Props) {
   const [manualHour, setManualHour] = useState('');
   const [manualMinute, setManualMinute] = useState('');
   const { importTomorrowEvents } = useCalendarImport();
+  const googleCal = useGoogleCalendar();
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      setMode('quiet');
+      if (!googleCal.isConfigured()) {
+        setMode('quiet');
+        return;
+      }
+      if (googleCal.hasToken()) {
+        googleCal.fetchTomorrow()
+          .then((evts) => {
+            if (evts.length > 0) {
+              setEvents(evts);
+              setSuggested(evts[0]);
+              setMode('suggested');
+            } else {
+              setMode('quiet');
+            }
+          })
+          .catch(() => setMode('google_connect'));
+      } else {
+        setMode('google_connect');
+      }
       return;
     }
     importTomorrowEvents().then((result) => {
@@ -238,6 +258,38 @@ export function AnchorConfirmCard({ onConfirm }: Props) {
     );
   }
 
+  if (mode === 'google_connect') {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.googleIcon}>G</Text>
+        <Text style={styles.quietHeading}>Connect Google Calendar</Text>
+        <Text style={styles.quietSub}>
+          Sign in once and Wakety checks tomorrow automatically.
+        </Text>
+        <View style={styles.actions}>
+          <Pressable
+            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+            onPress={googleCal.initiateAuth}
+          >
+            <Text style={styles.primaryText}>Continue with Google</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+            onPress={() => enterManual()}
+          >
+            <Text style={styles.secondaryText}>I'll enter it manually</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.ghost, pressed && styles.pressed]}
+            onPress={() => onConfirm(null)}
+          >
+            <Text style={styles.ghostText}>Nothing important tomorrow</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   // quiet
   return (
     <View style={styles.center}>
@@ -308,6 +360,13 @@ const styles = StyleSheet.create({
     color: '#5A7A9A',
     marginBottom: 40,
     letterSpacing: 0.5,
+  },
+  googleIcon: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#4285F4',
+    marginBottom: 20,
+    letterSpacing: -1,
   },
   quietMoon: {
     fontSize: 48,

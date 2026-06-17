@@ -8,6 +8,7 @@ import { QuietState } from './components/QuietState';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { UpdateCard } from './components/UpdateCard';
 import { PersonalSetup } from './data/types';
+import { useGoogleOAuthCallback } from './hooks/useGoogleCalendar';
 import { useNotifications } from './hooks/useNotifications';
 import { useUserPlan } from './hooks/useUserPlan';
 
@@ -31,6 +32,7 @@ export default function App() {
   const [adjusting, setAdjusting] = useState(false);
   const [advisoryConfirmed, setAdvisoryConfirmed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  useGoogleOAuthCallback();
 
   if (loading) {
     return <View style={styles.screen} />;
